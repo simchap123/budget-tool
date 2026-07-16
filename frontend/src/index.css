@@ -4,44 +4,88 @@
 
 @layer base {
   body {
-    @apply bg-white text-neutral-900;
+    @apply bg-canvas text-ink-50;
   }
 
   h1 {
-    @apply text-4xl font-bold;
+    @apply text-display-lg font-normal text-ink-50;
   }
 
   h2 {
-    @apply text-3xl font-bold;
+    @apply text-display-md font-normal text-ink-50;
   }
 
   h3 {
-    @apply text-2xl font-bold;
+    @apply text-display-sm font-normal text-ink-50;
+  }
+
+  h4 {
+    @apply text-lg font-normal text-ink-50;
   }
 
   p {
-    @apply text-base text-neutral-600;
+    @apply text-body-md text-ink-300;
+  }
+
+  a {
+    @apply text-accent-sunset hover:text-accent-sunset-soft transition-colors;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply rounded-lg bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 disabled:opacity-50;
+    @apply rounded-pill bg-ink-50 px-4 py-2 font-normal text-canvas hover:bg-ink-100 transition-colors disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply rounded-lg border border-neutral-300 bg-white px-4 py-2 font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-50;
+    @apply rounded-pill border border-ink-500 bg-transparent px-4 py-2 font-normal text-ink-50 hover:border-ink-300 hover:text-ink-100 transition-colors disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply rounded-lg bg-danger-600 px-4 py-2 font-medium text-white hover:bg-danger-700 disabled:opacity-50;
+    @apply rounded-pill bg-accent-dusk px-4 py-2 font-normal text-canvas hover:bg-accent-twilight transition-colors disabled:opacity-50;
   }
 
   .input-base {
-    @apply block w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply block w-full rounded-sm border border-ink-500 bg-canvas-soft px-3 py-2 text-ink-50 placeholder-ink-600 focus:border-accent-sunset focus:outline-none focus:ring-2 focus:ring-accent-sunset focus:ring-offset-2 focus:ring-offset-canvas transition-colors;
   }
 
   .card {
-    @apply rounded-lg border border-neutral-200 bg-white shadow-sm;
+    @apply rounded-sm border border-ink-700 bg-canvas-card shadow-lg;
+  }
+
+  .card-header {
+    @apply border-b border-ink-700 px-6 py-4;
+  }
+
+  .card-body {
+    @apply px-6 py-4;
+  }
+
+  .card-footer {
+    @apply border-t border-ink-700 px-6 py-4;
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center rounded-pill bg-accent-sunset bg-opacity-10 px-3 py-1 text-sm font-normal text-accent-sunset;
+  }
+
+  .badge-secondary {
+    @apply inline-flex items-center rounded-pill bg-accent-dusk bg-opacity-10 px-3 py-1 text-sm font-normal text-accent-twilight;
+  }
+
+  .table-minimal {
+    @apply w-full text-body-sm;
+  }
+
+  .table-minimal th {
+    @apply border-b border-ink-700 bg-canvas-card px-4 py-3 text-left font-normal text-ink-200;
+  }
+
+  .table-minimal td {
+    @apply border-b border-ink-700 px-4 py-3 text-ink-300;
+  }
+
+  .table-minimal tbody tr:hover {
+    @apply bg-canvas-soft;
   }
 }

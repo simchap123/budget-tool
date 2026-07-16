@@ -1,25 +1,26 @@
 export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-success-50">
+    <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        {/* Hero */}
         <div className="text-center">
-          <h1 className="text-5xl font-bold text-neutral-900">
-            💰 AI-Powered Budget Management
+          <h1 className="text-display-lg tracking-tight">
+            AI-Powered Budget
           </h1>
-          <p className="mt-4 text-lg text-neutral-600">
-            Connect your bank accounts, auto-categorize transactions, and generate insightful financial statements.
+          <p className="mt-6 text-lg text-ink-400">
+            Connect your accounts. Auto-categorize transactions. Generate statements.
           </p>
 
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
+          <div className="mt-12 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <button
               onClick={() => onNavigate('signup')}
-              className="btn-primary px-8 py-3 text-lg"
+              className="btn-primary px-8 py-3"
             >
-              Get Started Free
+              Get Started
             </button>
             <button
               onClick={() => onNavigate('login')}
-              className="btn-secondary px-8 py-3 text-lg"
+              className="btn-secondary px-8 py-3"
             >
               Sign In
             </button>
@@ -27,17 +28,31 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
         </div>
 
         {/* Features */}
-        <div className="mt-20">
-          <h2 className="text-3xl font-bold text-neutral-900">Features</h2>
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-32">
+          <h2 className="text-display-md">Features</h2>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
               <div key={feature.title} className="card p-6">
-                <div className="text-4xl">{feature.icon}</div>
-                <h3 className="mt-4 font-bold text-neutral-900">{feature.title}</h3>
-                <p className="mt-2 text-neutral-600">{feature.description}</p>
+                <div className="text-3xl">{feature.icon}</div>
+                <h3 className="mt-4 text-lg font-normal text-ink-50">{feature.title}</h3>
+                <p className="mt-2 text-body-sm text-ink-400">{feature.description}</p>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* CTA */}
+        <div className="mt-24 border border-ink-700 bg-canvas-card p-12 rounded-sm">
+          <h3 className="text-display-sm">Ready to control your finances?</h3>
+          <p className="mt-4 text-ink-400">
+            Start with unlimited accounts, AI-powered categorization, and beautiful reports.
+          </p>
+          <button
+            onClick={() => onNavigate('signup')}
+            className="mt-6 btn-primary px-8 py-3"
+          >
+            Get Started Free
+          </button>
         </div>
       </div>
     </div>

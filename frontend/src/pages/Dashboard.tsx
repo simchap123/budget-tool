@@ -31,64 +31,60 @@ export function Dashboard({ user }: { user: any }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-      <p className="mt-2 text-neutral-600">Welcome back, {user.name || user.email}</p>
+      <div>
+        <h1 className="text-display-lg">Dashboard</h1>
+        <p className="mt-2 text-ink-400">Welcome back, {user.name || user.email}</p>
+      </div>
 
       {/* Stats */}
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid gap-6 sm:grid-cols-3">
         <div className="card p-6">
-          <p className="text-sm text-neutral-600">Total Income</p>
-          <p className="mt-2 text-3xl font-bold text-success-600">$5,000</p>
+          <p className="text-body-sm text-ink-400">Total Income</p>
+          <p className="mt-2 text-3xl font-normal text-accent-sunset">$5,000</p>
         </div>
         <div className="card p-6">
-          <p className="text-sm text-neutral-600">Total Expenses</p>
-          <p className="mt-2 text-3xl font-bold text-danger-600">$1,923</p>
+          <p className="text-body-sm text-ink-400">Total Expenses</p>
+          <p className="mt-2 text-3xl font-normal text-accent-dusk">$1,923</p>
         </div>
         <div className="card p-6">
-          <p className="text-sm text-neutral-600">Net Income</p>
-          <p className="mt-2 text-3xl font-bold text-primary-600">$3,077</p>
+          <p className="text-body-sm text-ink-400">Net Income</p>
+          <p className="mt-2 text-3xl font-normal text-accent-breeze">$3,077</p>
         </div>
       </div>
 
       {/* Transactions */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-neutral-900">Recent Transactions</h2>
+      <div className="mt-12">
+        <h2 className="text-display-sm">Recent Transactions</h2>
 
         {loading ? (
-          <p className="mt-4 text-neutral-600">Loading transactions...</p>
+          <p className="mt-4 text-ink-400">Loading transactions...</p>
         ) : error ? (
-          <p className="mt-4 text-danger-600">{error}</p>
+          <p className="mt-4 text-accent-dusk">{error}</p>
         ) : transactions.length === 0 ? (
-          <p className="mt-4 text-neutral-600">No transactions yet.</p>
+          <p className="mt-4 text-ink-400">No transactions yet.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full">
+          <div className="mt-6 overflow-x-auto rounded-sm border border-ink-700">
+            <table className="table-minimal">
               <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-900">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-900">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-neutral-900">
-                    Category
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-neutral-900">
-                    Amount
-                  </th>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th className="text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((txn: any) => (
-                  <tr key={txn.id} className="border-b border-neutral-200 hover:bg-neutral-50">
-                    <td className="px-4 py-3 text-sm text-neutral-900">
+                  <tr key={txn.id}>
+                    <td className="text-ink-300">
                       {new Date(txn.created).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-neutral-900">{txn.description}</td>
-                    <td className="px-4 py-3 text-sm text-neutral-600">{txn.category || 'Uncategorized'}</td>
-                    <td className="px-4 py-3 text-right text-sm font-medium text-neutral-900">
-                      {txn.type === 'income' ? '+' : '-'}${txn.amount.toFixed(2)}
+                    <td className="text-ink-300">{txn.description}</td>
+                    <td className="text-ink-400">{txn.category || 'Uncategorized'}</td>
+                    <td className="text-right">
+                      <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
+                        {txn.type === 'income' ? '+' : '-'}${txn.amount.toFixed(2)}
+                      </span>
                     </td>
                   </tr>
                 ))}

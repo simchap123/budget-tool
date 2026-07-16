@@ -10,12 +10,15 @@ export function Header({
   onLogout: () => void
 }) {
   return (
-    <header className="border-b border-neutral-200 bg-white">
+    <header className="border-b border-ink-700 bg-canvas">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate('home')}>
+          <div
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onNavigate('home')}
+          >
             <span className="text-2xl">💰</span>
-            <span className="text-xl font-bold text-neutral-900">Budget Tool</span>
+            <span className="text-lg font-normal text-ink-50">Budget</span>
           </div>
 
           <div className="flex items-center gap-6">
@@ -23,19 +26,19 @@ export function Header({
               <>
                 <button
                   onClick={() => onNavigate('dashboard')}
-                  className={`font-medium ${
+                  className={`text-body-md font-normal transition-colors ${
                     currentPage === 'dashboard'
-                      ? 'text-primary-600'
-                      : 'text-neutral-600 hover:text-neutral-900'
+                      ? 'text-accent-sunset'
+                      : 'text-ink-400 hover:text-ink-200'
                   }`}
                 >
                   Dashboard
                 </button>
-                <div className="h-6 w-px bg-neutral-200" />
-                <span className="text-sm text-neutral-600">{user.email}</span>
+                <div className="h-6 w-px bg-ink-700" />
+                <span className="text-body-sm text-ink-500">{user.email}</span>
                 <button
                   onClick={onLogout}
-                  className="text-sm font-medium text-danger-600 hover:text-danger-700"
+                  className="text-body-sm font-normal text-accent-dusk hover:text-accent-twilight transition-colors"
                 >
                   Logout
                 </button>
@@ -44,7 +47,7 @@ export function Header({
               <>
                 <button
                   onClick={() => onNavigate('login')}
-                  className="font-medium text-neutral-600 hover:text-neutral-900"
+                  className="text-body-md font-normal text-ink-400 hover:text-ink-200 transition-colors"
                 >
                   Sign In
                 </button>

@@ -34,40 +34,40 @@ export function Login({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
       <div className="w-full max-w-md">
         <div className="card p-8">
-          <h1 className="text-2xl font-bold text-neutral-900">Sign In</h1>
+          <h1 className="text-display-md">Sign In</h1>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             {error && (
-              <div className="rounded-lg bg-danger-50 p-4 text-danger-700">
+              <div className="rounded-sm border border-accent-dusk bg-accent-dusk bg-opacity-10 p-4 text-accent-twilight">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-neutral-900">
+              <label className="block text-body-sm font-normal text-ink-200 mb-2">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-base mt-1"
+                className="input-base"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-neutral-900">
+              <label className="block text-body-sm font-normal text-ink-200 mb-2">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-base mt-1"
+                className="input-base"
                 required
               />
             </div>
@@ -81,13 +81,13 @@ export function Login({
             </button>
           </form>
 
-          <p className="mt-4 text-center text-neutral-600">
+          <p className="mt-6 text-center text-ink-400">
             Don't have an account?{' '}
             <button
               onClick={onSignupClick}
-              className="font-medium text-primary-600 hover:text-primary-700"
+              className="font-normal text-accent-sunset hover:text-accent-sunset-soft"
             >
-              Sign up
+              Create one
             </button>
           </p>
         </div>
