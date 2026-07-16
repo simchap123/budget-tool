@@ -1,0 +1,23 @@
+meta:
+  name: "Budget Tool API"
+  version: "0.1.0"
+  description: "PocketBase backend for Budget Tool"
+
+bootstrap:
+  # Default admin account (change in production!)
+  adminEmail: "admin@budgettool.local"
+  adminPassword: "changeme123"
+
+adminUI:
+  enabled: true
+  indexFallback: true
+  dir: ""
+
+apiURL: "http://localhost:8090"
+
+apiPreloadCollections: []
+
+appName: "Budget Tool"
+
+# Collections will be created automatically
+# See migrations/ folder for schema
