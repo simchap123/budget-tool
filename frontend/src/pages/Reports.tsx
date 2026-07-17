@@ -37,10 +37,11 @@ export function Reports() {
       if (!stats[category]) {
         stats[category] = { income: 0, expense: 0, count: 0 }
       }
+      const amount = typeof txn.amount === 'string' ? parseFloat(txn.amount) : txn.amount
       if (txn.type === 'income') {
-        stats[category].income += txn.amount
+        stats[category].income += amount
       } else {
-        stats[category].expense += txn.amount
+        stats[category].expense += amount
       }
       stats[category].count += 1
     })
@@ -63,10 +64,11 @@ export function Reports() {
         byMonth[monthKey] = { income: 0, expense: 0 }
       }
 
+      const amount = typeof txn.amount === 'string' ? parseFloat(txn.amount) : txn.amount
       if (txn.type === 'income') {
-        byMonth[monthKey].income += txn.amount
+        byMonth[monthKey].income += amount
       } else {
-        byMonth[monthKey].expense += txn.amount
+        byMonth[monthKey].expense += amount
       }
     })
 
@@ -82,10 +84,10 @@ export function Reports() {
   const getTotals = () => {
     const income = transactions
       .filter((t: any) => t.type === 'income')
-      .reduce((sum, t: any) => sum + t.amount, 0)
+      .reduce((sum, t: any) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount), 0)
     const expense = transactions
       .filter((t: any) => t.type === 'expense')
-      .reduce((sum, t: any) => sum + t.amount, 0)
+      .reduce((sum, t: any) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount), 0)
 
     return { income, expense, net: income - expense, count: transactions.length }
   }

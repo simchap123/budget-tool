@@ -129,10 +129,16 @@ export function Dashboard({ user }: { user: any }) {
   const calculateStats = () => {
     const income = transactions
       .filter((t: any) => t.type === 'income')
-      .reduce((sum, t: any) => sum + (t.amount || 0), 0)
+      .reduce((sum, t: any) => {
+        const amount = typeof t.amount === 'string' ? parseFloat(t.amount) : (t.amount || 0)
+        return sum + amount
+      }, 0)
     const expenses = transactions
       .filter((t: any) => t.type === 'expense')
-      .reduce((sum, t: any) => sum + (t.amount || 0), 0)
+      .reduce((sum, t: any) => {
+        const amount = typeof t.amount === 'string' ? parseFloat(t.amount) : (t.amount || 0)
+        return sum + amount
+      }, 0)
     return { income, expenses, net: income - expenses }
   }
 
@@ -299,13 +305,13 @@ export function Dashboard({ user }: { user: any }) {
                     <td className="text-right space-x-2">
                       <button
                         onClick={() => handleEditTransaction(txn)}
-                        className="text-body-sm text-accent-sunset hover:text-accent-sunset-soft"
+                        className="inline-block px-3 py-1 text-body-sm font-normal bg-accent-sunset text-canvas rounded hover:bg-accent-sunset-soft transition-colors"
                       >
                         ✏️ Edit
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(txn.id)}
-                        className="text-body-sm text-accent-dusk hover:text-accent-twilight"
+                        className="inline-block px-3 py-1 text-body-sm font-normal bg-accent-dusk text-canvas rounded hover:bg-accent-twilight transition-colors"
                       >
                         🗑️ Delete
                       </button>
