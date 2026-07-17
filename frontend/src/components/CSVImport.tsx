@@ -8,6 +8,10 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+  const userEmail = auth.record?.email || ''
+  const isAuthorized = userEmail === 'spentelnik@gmail.com'
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (!selectedFile) return
@@ -117,6 +121,12 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
     <div className="card p-6">
       <h3 className="text-lg font-normal text-ink-50 mb-4">Import Transactions from CSV</h3>
 
+      {!isAuthorized && (
+        <div className="rounded-sm border border-accent-dusk bg-accent-dusk bg-opacity-10 p-3 text-accent-dusk text-sm mb-4">
+          💡 CSV imports are only available for spentelnik@gmail.com
+        </div>
+      )}
+
       <div className="space-y-4">
         <div>
           <label className="block text-body-sm font-normal text-ink-200 mb-2">
@@ -126,12 +136,14 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
             type="file"
             accept=".csv"
             onChange={handleFileChange}
+            disabled={!isAuthorized}
             className="block w-full text-sm text-ink-400
               file:mr-4 file:py-2 file:px-4
               file:rounded-sm file:border-0
               file:text-sm file:font-normal
               file:bg-accent-sunset file:text-canvas
-              hover:file:bg-accent-sunset-soft"
+              hover:file:bg-accent-sunset-soft
+              disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <p className="mt-2 text-body-sm text-ink-500">
             Format: date, description, amount, type (income/expense), category
@@ -180,10 +192,10 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
 
         <button
           onClick={handleImport}
-          disabled={!file || loading}
-          className="btn-primary w-full py-2"
+          disabled={!file || loading || !isAuthorized}
+          className="btn-primary w-full py-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Importing...' : 'Import Transactions'}
+          {!isAuthorized ? 'Import Disabled' : loading ? 'Importing...' : 'Import Transactions'}
         </button>
       </div>
     </div>

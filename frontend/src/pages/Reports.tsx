@@ -107,21 +107,21 @@ export function Reports() {
 
       {/* Summary Cards */}
       <div className="mt-8 grid gap-6 sm:grid-cols-4">
-        <div className="card p-6">
-          <p className="text-body-sm text-ink-400">Total Transactions</p>
-          <p className="mt-2 text-3xl font-normal text-ink-50">{totals.count}</p>
+        <div className="card p-6 border-l-4 border-accent-breeze">
+          <p className="text-body-sm text-ink-400">📊 Total Transactions</p>
+          <p className="mt-3 text-4xl font-bold text-accent-breeze">{totals.count}</p>
         </div>
-        <div className="card p-6">
-          <p className="text-body-sm text-ink-400">Total Income</p>
-          <p className="mt-2 text-3xl font-normal text-accent-sunset">${totals.income.toFixed(2)}</p>
+        <div className="card p-6 border-l-4 border-accent-sunset">
+          <p className="text-body-sm text-ink-400">📈 Total Income</p>
+          <p className="mt-3 text-4xl font-bold text-accent-sunset">${totals.income.toFixed(2)}</p>
         </div>
-        <div className="card p-6">
-          <p className="text-body-sm text-ink-400">Total Expenses</p>
-          <p className="mt-2 text-3xl font-normal text-accent-dusk">${totals.expense.toFixed(2)}</p>
+        <div className="card p-6 border-l-4 border-accent-dusk">
+          <p className="text-body-sm text-ink-400">📉 Total Expenses</p>
+          <p className="mt-3 text-4xl font-bold text-accent-dusk">${totals.expense.toFixed(2)}</p>
         </div>
-        <div className="card p-6">
-          <p className="text-body-sm text-ink-400">Net Income</p>
-          <p className={`mt-2 text-3xl font-normal ${totals.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
+        <div className={`card p-6 border-l-4 ${totals.net >= 0 ? 'border-accent-breeze' : 'border-accent-dusk'}`}>
+          <p className="text-body-sm text-ink-400">💰 Net Income</p>
+          <p className={`mt-3 text-4xl font-bold ${totals.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
             ${totals.net.toFixed(2)}
           </p>
         </div>
@@ -129,8 +129,11 @@ export function Reports() {
 
       {/* Category Breakdown */}
       <div className="mt-12">
-        <h2 className="text-display-sm">Category Breakdown</h2>
-        <div className="mt-6 overflow-x-auto rounded-sm border border-ink-700">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-1 h-8 bg-gradient-to-b from-accent-sunset to-accent-dusk rounded"></div>
+          <h2 className="text-display-sm">📊 Category Breakdown</h2>
+        </div>
+        <div className="mt-6 overflow-x-auto rounded-sm border border-ink-700 border-t-4 border-t-accent-sunset">
           <table className="table-minimal">
             <thead>
               <tr>
@@ -142,13 +145,17 @@ export function Reports() {
               </tr>
             </thead>
             <tbody>
-              {categoryStats.map((cat) => (
-                <tr key={cat.name}>
-                  <td className="text-ink-300">{cat.name}</td>
-                  <td className="text-right text-ink-400">{cat.count}</td>
-                  <td className="text-right text-accent-sunset">${cat.income.toFixed(2)}</td>
-                  <td className="text-right text-accent-dusk">${cat.expense.toFixed(2)}</td>
-                  <td className={`text-right ${cat.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
+              {categoryStats.map((cat, idx) => (
+                <tr key={cat.name} className={idx % 2 === 0 ? 'bg-canvas-card' : ''}>
+                  <td className="text-ink-300 font-medium">{cat.name}</td>
+                  <td className="text-right">
+                    <span className="inline-block px-2 py-1 bg-accent-breeze text-canvas text-body-sm rounded-full font-medium">
+                      {cat.count}
+                    </span>
+                  </td>
+                  <td className="text-right text-accent-sunset font-medium">${cat.income.toFixed(2)}</td>
+                  <td className="text-right text-accent-dusk font-medium">${cat.expense.toFixed(2)}</td>
+                  <td className={`text-right font-bold ${cat.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
                     ${cat.net.toFixed(2)}
                   </td>
                 </tr>
@@ -161,8 +168,11 @@ export function Reports() {
       {/* Monthly Trend */}
       {trendData.length > 0 && (
         <div className="mt-12">
-          <h2 className="text-display-sm">Monthly Trend</h2>
-          <div className="mt-6 overflow-x-auto rounded-sm border border-ink-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-8 bg-gradient-to-b from-accent-breeze to-accent-sunset rounded"></div>
+            <h2 className="text-display-sm">📈 Monthly Trend</h2>
+          </div>
+          <div className="mt-6 overflow-x-auto rounded-sm border border-ink-700 border-t-4 border-t-accent-breeze">
             <table className="table-minimal">
               <thead>
                 <tr>
@@ -173,12 +183,12 @@ export function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {trendData.map((trend) => (
-                  <tr key={trend.month}>
-                    <td className="text-ink-300">{trend.month}</td>
-                    <td className="text-right text-accent-sunset">${trend.income.toFixed(2)}</td>
-                    <td className="text-right text-accent-dusk">${trend.expense.toFixed(2)}</td>
-                    <td className={`text-right ${trend.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
+                {trendData.map((trend, idx) => (
+                  <tr key={trend.month} className={idx % 2 === 0 ? 'bg-canvas-card' : ''}>
+                    <td className="text-ink-300 font-medium">{trend.month}</td>
+                    <td className="text-right text-accent-sunset font-medium">${trend.income.toFixed(2)}</td>
+                    <td className="text-right text-accent-dusk font-medium">${trend.expense.toFixed(2)}</td>
+                    <td className={`text-right font-bold ${trend.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
                       ${trend.net.toFixed(2)}
                     </td>
                   </tr>
