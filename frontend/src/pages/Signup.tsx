@@ -27,13 +27,15 @@ export function Signup({
     setLoading(true)
 
     try {
+      const apiUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8090/api`
+
       await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8090'}/api/collections/users/records`,
+        `${apiUrl}/collections/users/records`,
         { email, password, passwordConfirm, name }
       )
 
       const loginResponse = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8090'}/api/collections/users/auth-with-password`,
+        `${apiUrl}/collections/users/auth-with-password`,
         { identity: email, password }
       )
 

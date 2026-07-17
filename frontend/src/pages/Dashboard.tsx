@@ -13,8 +13,9 @@ export function Dashboard({ user }: { user: any }) {
   const fetchTransactions = async () => {
     try {
       const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8090/api`
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8090'}/api/collections/transactions/records`,
+        `${apiUrl}/collections/transactions/records`,
         {
           headers: {
             Authorization: `Bearer ${auth.token}`,
