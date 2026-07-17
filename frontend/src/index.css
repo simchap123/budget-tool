@@ -34,11 +34,11 @@
 
 @layer components {
   .btn-primary {
-    @apply rounded-pill bg-ink-50 px-4 py-2 font-normal text-canvas hover:bg-ink-100 transition-colors disabled:opacity-50;
+    @apply rounded-pill bg-accent-sunset px-4 py-2 font-normal text-canvas hover:bg-accent-sunset-soft transition-colors disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply rounded-pill border border-ink-500 bg-transparent px-4 py-2 font-normal text-ink-50 hover:border-ink-300 hover:text-ink-100 transition-colors disabled:opacity-50;
+    @apply rounded-pill border-2 border-accent-sunset bg-transparent px-4 py-2 font-normal text-accent-sunset hover:bg-accent-sunset hover:text-canvas transition-colors disabled:opacity-50;
   }
 
   .btn-danger {
