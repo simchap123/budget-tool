@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Settings } from 'lucide-react'
 
 export function Header({
   user,
@@ -46,6 +46,16 @@ export function Header({
                   Dashboard
                 </button>
                 <button
+                  onClick={() => handleNavClick('budget')}
+                  className={`text-body-md font-normal transition-colors ${
+                    currentPage === 'budget'
+                      ? 'text-accent-sunset'
+                      : 'text-ink-400 hover:text-ink-200'
+                  }`}
+                >
+                  Budget
+                </button>
+                <button
                   onClick={() => handleNavClick('reports')}
                   className={`text-body-md font-normal transition-colors ${
                     currentPage === 'reports'
@@ -54,6 +64,23 @@ export function Header({
                   }`}
                 >
                   Reports
+                </button>
+                <button
+                  onClick={() => handleNavClick('analytics')}
+                  className={`text-body-md font-normal transition-colors ${
+                    currentPage === 'analytics'
+                      ? 'text-accent-sunset'
+                      : 'text-ink-400 hover:text-ink-200'
+                  }`}
+                >
+                  Analytics
+                </button>
+                <button
+                  onClick={() => handleNavClick('categories')}
+                  className="p-1 text-ink-400 hover:text-ink-200 transition-colors"
+                  title="Categories"
+                >
+                  <Settings size={20} />
                 </button>
                 <div className="h-6 w-px bg-ink-700" />
                 <span className="text-body-sm text-ink-500">{user.email}</span>
@@ -108,6 +135,16 @@ export function Header({
                     Dashboard
                   </button>
                   <button
+                    onClick={() => handleNavClick('budget')}
+                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'budget'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Budget
+                  </button>
+                  <button
                     onClick={() => handleNavClick('reports')}
                     className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'reports'
@@ -116,6 +153,26 @@ export function Header({
                     }`}
                   >
                     Reports
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('analytics')}
+                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'analytics'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Analytics
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('categories')}
+                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'categories'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Categories
                   </button>
                   <div className="h-px w-full bg-ink-700" />
                   <span className="block px-4 py-2 text-body-sm text-ink-500">{user.email}</span>

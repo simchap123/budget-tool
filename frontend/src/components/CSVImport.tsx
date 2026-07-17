@@ -1,5 +1,30 @@
 import { useState } from 'react'
 import axios from 'axios'
+import { trackImport } from '../utils/analytics'
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  result.push(current.trim())
+  return result
+}
 
 export function CSVImport({ onImportComplete }: { onImportComplete: () => void }) {
   const [file, setFile] = useState<File | null>(null)
@@ -8,9 +33,6 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
-  const userEmail = auth.record?.email || ''
-  const isAuthorized = userEmail === 'spentelnik@gmail.com'
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -24,10 +46,10 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
     reader.onload = (event) => {
       const csv = event.target?.result as string
       const rows = csv.split('\n').filter(row => row.trim())
-      const headers = rows[0].split(',').map(h => h.trim())
+      const headers = parseCSVLine(rows[0]).map(h => h.trim())
 
       const data = rows.slice(1).map(row => {
-        const values = row.split(',').map(v => v.trim())
+        const values = parseCSVLine(row).map(v => v.trim())
         return headers.reduce((obj, header, idx) => {
           obj[header.toLowerCase()] = values[idx]
           return obj
@@ -54,14 +76,14 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
 
       const csv = await file.text()
       const rows = csv.split('\n').filter(row => row.trim())
-      const headers = rows[0].split(',').map(h => h.trim())
+      const headers = parseCSVLine(rows[0]).map(h => h.trim())
 
       let imported = 0
       let failed = 0
 
       for (let i = 1; i < rows.length; i++) {
         try {
-          const values = rows[i].split(',').map(v => v.trim())
+          const values = parseCSVLine(rows[i]).map(v => v.trim())
           const data = headers.reduce((obj, header, idx) => {
             obj[header.toLowerCase()] = values[idx]
             return obj
@@ -87,7 +109,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
               type: type === 'income' || type === 'in' ? 'income' : 'expense',
               category,
               userId: auth.record.id,
-              created: date,
+              date: date,
             },
             {
               headers: {
@@ -103,6 +125,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
       }
 
       setSuccess(`✅ Imported ${imported} transactions${failed > 0 ? ` (${failed} failed)` : ''}`)
+      trackImport(imported)
       setFile(null)
       setPreview([])
 
@@ -121,11 +144,6 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
     <div className="card p-6">
       <h3 className="text-lg font-normal text-ink-50 mb-4">Import Transactions from CSV</h3>
 
-      {!isAuthorized && (
-        <div className="rounded-sm border border-accent-dusk bg-accent-dusk bg-opacity-10 p-3 text-accent-dusk text-sm mb-4">
-          💡 CSV imports are only available for spentelnik@gmail.com
-        </div>
-      )}
 
       <div className="space-y-4">
         <div>
@@ -136,7 +154,6 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
             type="file"
             accept=".csv"
             onChange={handleFileChange}
-            disabled={!isAuthorized}
             className="block w-full text-sm text-ink-400
               file:mr-4 file:py-2 file:px-4
               file:rounded-sm file:border-0
@@ -151,7 +168,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
         </div>
 
         {error && (
-          <div className="rounded-sm border border-accent-dusk bg-accent-dusk bg-opacity-10 p-3 text-accent-dusk text-sm">
+          <div className="rounded-sm border border-red-700 bg-red-500/10 p-3 text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -192,10 +209,10 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
 
         <button
           onClick={handleImport}
-          disabled={!file || loading || !isAuthorized}
+          disabled={!file || loading}
           className="btn-primary w-full py-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {!isAuthorized ? 'Import Disabled' : loading ? 'Importing...' : 'Import Transactions'}
+          {loading ? 'Importing...' : 'Import Transactions'}
         </button>
       </div>
     </div>

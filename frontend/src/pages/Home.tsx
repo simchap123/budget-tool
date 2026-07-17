@@ -1,9 +1,9 @@
 export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-canvas page-enter">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         {/* Hero */}
-        <div className="text-center">
+        <div className="text-center animate-fade-in">
           <h1 className="text-display-lg tracking-tight">
             AI-Powered Budget
           </h1>
@@ -29,10 +29,14 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
 
         {/* Features */}
         <div className="mt-32">
-          <h2 className="text-display-md">Features</h2>
+          <h2 className="text-display-md animate-fade-in">Features</h2>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <div key={feature.title} className="card p-6">
+            {features.map((feature, idx) => (
+              <div
+                key={feature.title}
+                className="card p-6 animate-fade-in"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
                 <div className="text-3xl">{feature.icon}</div>
                 <h3 className="mt-4 text-lg font-normal text-ink-50">{feature.title}</h3>
                 <p className="mt-2 text-body-sm text-ink-400">{feature.description}</p>

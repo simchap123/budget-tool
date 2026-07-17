@@ -48,7 +48,7 @@ export function Login({
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             {error && (
-              <div className="rounded-sm border border-accent-dusk bg-accent-dusk bg-opacity-10 p-4 text-accent-twilight">
+              <div className="rounded-sm border border-red-700 bg-red-500/10 p-4 text-red-400">
                 {error}
               </div>
             )}

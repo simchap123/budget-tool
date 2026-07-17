@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
 import { SkeletonTable } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
+import { trackTransactionAction } from '../utils/analytics'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -83,6 +84,7 @@ export function Dashboard({ user }: { user: any }) {
             },
           }
         )
+        trackTransactionAction('edit', formData.type)
       } else {
         // Create new transaction
         await axios.post(
@@ -101,6 +103,7 @@ export function Dashboard({ user }: { user: any }) {
             },
           }
         )
+        trackTransactionAction('add', formData.type)
       }
 
       setFormData({ amount: '', description: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0] })
@@ -129,6 +132,7 @@ export function Dashboard({ user }: { user: any }) {
         }
       )
 
+      trackTransactionAction('delete', 'expense')
       setShowDeleteConfirm(null)
       await fetchTransactions()
     } catch (err: any) {
@@ -168,7 +172,7 @@ export function Dashboard({ user }: { user: any }) {
   const stats = calculateStats()
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div>
         <h1 className="text-display-lg">Dashboard</h1>
         <p className="mt-2 text-ink-400">Welcome back, {user.name || user.email}</p>
