@@ -1,0 +1,10 @@
+Date,Description,Amount,Type,Category
+May 1 2026,Starting balance,25.44,income,Banking
+May 1 2026,Monthly charge: Visa,25.44,expense,Fees
+May 1 2026,Local sales tax,36.65,expense,Taxes
+May 1 2026,State sales tax,33.51,expense,Taxes
+May 28 2026,Threshold charge: Visa,100.00,expense,Fees
+May 28 2026,Threshold charge: Visa,200.00,expense,Fees
+May 28 2026,Threshold charge: Visa,500.00,expense,Fees
+May 1-31 2026,Google Cloud,837.68,expense,Software
+May 29 2026,Ending balance,107.84,income,Banking

@@ -34,6 +34,16 @@ export function Header({
                 >
                   Dashboard
                 </button>
+                <button
+                  onClick={() => onNavigate('reports')}
+                  className={`text-body-md font-normal transition-colors ${
+                    currentPage === 'reports'
+                      ? 'text-accent-sunset'
+                      : 'text-ink-400 hover:text-ink-200'
+                  }`}
+                >
+                  Reports
+                </button>
                 <div className="h-6 w-px bg-ink-700" />
                 <span className="text-body-sm text-ink-500">{user.email}</span>
                 <button

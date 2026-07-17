@@ -8,6 +8,8 @@ export function Dashboard({ user }: { user: any }) {
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '' })
   const [submitting, setSubmitting] = useState(false)
 
@@ -44,15 +46,60 @@ export function Dashboard({ user }: { user: any }) {
       const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
 
-      await axios.post(
-        `${apiUrl}/collections/transactions/records`,
-        {
-          amount: parseFloat(formData.amount),
-          description: formData.description,
-          type: formData.type,
-          category: formData.category || 'Uncategorized',
-          userId: auth.record.id,
-        },
+      if (editingId) {
+        // Update existing transaction
+        await axios.patch(
+          `${apiUrl}/collections/transactions/records/${editingId}`,
+          {
+            amount: parseFloat(formData.amount),
+            description: formData.description,
+            type: formData.type,
+            category: formData.category || 'Uncategorized',
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${auth.token}`,
+            },
+          }
+        )
+      } else {
+        // Create new transaction
+        await axios.post(
+          `${apiUrl}/collections/transactions/records`,
+          {
+            amount: parseFloat(formData.amount),
+            description: formData.description,
+            type: formData.type,
+            category: formData.category || 'Uncategorized',
+            userId: auth.record.id,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${auth.token}`,
+            },
+          }
+        )
+      }
+
+      setFormData({ amount: '', description: '', type: 'expense', category: '' })
+      setFormOpen(false)
+      setEditingId(null)
+      await fetchTransactions()
+    } catch (err: any) {
+      console.error('Error saving transaction:', err)
+      alert('Failed to save transaction: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+
+      await axios.delete(
+        `${apiUrl}/collections/transactions/records/${id}`,
         {
           headers: {
             Authorization: `Bearer ${auth.token}`,
@@ -60,15 +107,23 @@ export function Dashboard({ user }: { user: any }) {
         }
       )
 
-      setFormData({ amount: '', description: '', type: 'expense', category: '' })
-      setFormOpen(false)
+      setShowDeleteConfirm(null)
       await fetchTransactions()
     } catch (err: any) {
-      console.error('Error adding transaction:', err)
-      alert('Failed to add transaction: ' + (err.response?.data?.message || err.message))
-    } finally {
-      setSubmitting(false)
+      console.error('Error deleting transaction:', err)
+      alert('Failed to delete transaction')
     }
+  }
+
+  const handleEditTransaction = (txn: any) => {
+    setEditingId(txn.id)
+    setFormData({
+      amount: txn.amount.toString(),
+      description: txn.description,
+      type: txn.type,
+      category: txn.category || 'Uncategorized',
+    })
+    setFormOpen(true)
   }
 
   const calculateStats = () => {
@@ -137,6 +192,9 @@ export function Dashboard({ user }: { user: any }) {
 
         {formOpen && (
           <div className="mt-6 card p-6">
+            <h3 className="text-lg font-normal text-ink-50 mb-4">
+              {editingId ? 'Edit Transaction' : 'Add New Transaction'}
+            </h3>
             <form onSubmit={handleAddTransaction} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -198,7 +256,7 @@ export function Dashboard({ user }: { user: any }) {
                 disabled={submitting}
                 className="btn-primary w-full py-2"
               >
-                {submitting ? 'Adding...' : 'Add Transaction'}
+                {submitting ? (editingId ? 'Updating...' : 'Adding...') : (editingId ? 'Update Transaction' : 'Add Transaction')}
               </button>
             </form>
           </div>
@@ -222,6 +280,7 @@ export function Dashboard({ user }: { user: any }) {
                   <th>Description</th>
                   <th>Category</th>
                   <th className="text-right">Amount</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,6 +295,44 @@ export function Dashboard({ user }: { user: any }) {
                       <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
                         {txn.type === 'income' ? '+' : '-'}${txn.amount.toFixed(2)}
                       </span>
+                    </td>
+                    <td className="text-right space-x-2">
+                      <button
+                        onClick={() => handleEditTransaction(txn)}
+                        className="text-body-sm text-accent-sunset hover:text-accent-sunset-soft"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(txn.id)}
+                        className="text-body-sm text-accent-dusk hover:text-accent-twilight"
+                      >
+                        🗑️ Delete
+                      </button>
+                      {showDeleteConfirm === txn.id && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                          <div className="card p-6 max-w-sm">
+                            <h3 className="text-lg font-normal text-ink-50 mb-4">Delete Transaction?</h3>
+                            <p className="text-ink-300 mb-6">
+                              Are you sure you want to delete this transaction? This cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => setShowDeleteConfirm(null)}
+                                className="btn-secondary flex-1"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(txn.id)}
+                                className="btn-primary flex-1 bg-accent-dusk hover:bg-accent-twilight"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

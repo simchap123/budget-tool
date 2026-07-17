@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Home } from './pages/Home'
 import { Dashboard } from './pages/Dashboard'
+import { Reports } from './pages/Reports'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Header } from './components/Header'
@@ -65,6 +66,9 @@ export default function App() {
         )}
         {currentPage === 'dashboard' && user && (
           <Dashboard user={user} />
+        )}
+        {currentPage === 'reports' && user && (
+          <Reports />
         )}
         {currentPage === 'dashboard' && !user && (
           <Home onNavigate={setCurrentPage} />
