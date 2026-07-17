@@ -42,7 +42,7 @@
   }
 
   .btn-danger {
-    @apply rounded-pill bg-accent-dusk px-4 py-2 font-normal text-canvas hover:bg-accent-twilight transition-colors disabled:opacity-50;
+    @apply rounded-pill bg-accent-dusk px-4 py-2 font-normal text-canvas hover:bg-purple-700 transition-colors disabled:opacity-50;
   }
 
   .input-base {
@@ -50,7 +50,7 @@
   }
 
   .card {
-    @apply rounded-sm border border-ink-700 bg-canvas-card shadow-lg;
+    @apply rounded-sm border border-ink-700 bg-canvas-card shadow-lg transition-shadow duration-200 hover:shadow-lg hover:shadow-black/30;
   }
 
   .card-header {
@@ -85,7 +85,41 @@
     @apply border-b border-ink-700 px-4 py-3 text-ink-300;
   }
 
+  .table-minimal tbody tr {
+    @apply transition-colors duration-100;
+  }
+
   .table-minimal tbody tr:hover {
     @apply bg-canvas-soft;
+  }
+
+  .alert-error {
+    @apply rounded-sm border border-red-700 bg-red-500/10 p-3 text-red-400 text-body-sm;
+  }
+
+  .alert-success {
+    @apply rounded-sm border border-green-700 bg-green-500/10 p-3 text-green-400 text-body-sm;
+  }
+
+  .alert-info {
+    @apply rounded-sm border border-blue-700 bg-blue-500/10 p-3 text-blue-400 text-body-sm;
+  }
+
+  .skeleton {
+    @apply rounded-sm bg-canvas-soft;
+    background: linear-gradient(90deg, #1a1c20 25%, #363a3f 50%, #1a1c20 75%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  .page-enter {
+    @apply animate-fade-in;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

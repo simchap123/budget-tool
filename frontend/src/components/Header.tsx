@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { Menu, X } from 'lucide-react'
+
 export function Header({
   user,
   currentPage,
@@ -9,23 +12,31 @@ export function Header({
   onNavigate: (page: string) => void
   onLogout: () => void
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const handleNavClick = (page: string) => {
+    onNavigate(page)
+    setMobileOpen(false)
+  }
+
   return (
     <header className="border-b border-ink-700 bg-canvas">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => onNavigate('home')}
+            onClick={() => handleNavClick('home')}
           >
             <span className="text-2xl">💰</span>
-            <span className="text-lg font-normal text-ink-50">Budget</span>
+            <span className="text-lg font-normal text-ink-50 hidden sm:inline">Budget</span>
           </div>
 
-          <div className="flex items-center gap-6">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-6">
             {user ? (
               <>
                 <button
-                  onClick={() => onNavigate('dashboard')}
+                  onClick={() => handleNavClick('dashboard')}
                   className={`text-body-md font-normal transition-colors ${
                     currentPage === 'dashboard'
                       ? 'text-accent-sunset'
@@ -35,7 +46,7 @@ export function Header({
                   Dashboard
                 </button>
                 <button
-                  onClick={() => onNavigate('reports')}
+                  onClick={() => handleNavClick('reports')}
                   className={`text-body-md font-normal transition-colors ${
                     currentPage === 'reports'
                       ? 'text-accent-sunset'
@@ -48,7 +59,7 @@ export function Header({
                 <span className="text-body-sm text-ink-500">{user.email}</span>
                 <button
                   onClick={onLogout}
-                  className="text-body-sm font-normal text-accent-dusk hover:text-accent-twilight transition-colors"
+                  className="text-body-sm font-normal text-accent-dusk hover:text-red-400 transition-colors"
                 >
                   Logout
                 </button>
@@ -56,13 +67,13 @@ export function Header({
             ) : (
               <>
                 <button
-                  onClick={() => onNavigate('login')}
+                  onClick={() => handleNavClick('login')}
                   className="text-body-md font-normal text-ink-400 hover:text-ink-200 transition-colors"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={() => onNavigate('signup')}
+                  onClick={() => handleNavClick('signup')}
                   className="btn-primary py-2"
                 >
                   Get Started
@@ -70,7 +81,70 @@ export function Header({
               </>
             )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden text-ink-400 hover:text-ink-200 transition-colors"
+          >
+            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
+
+        {/* Mobile Navigation */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-ink-700 bg-canvas-card py-4 animate-slide-down">
+            <div className="space-y-3">
+              {user ? (
+                <>
+                  <button
+                    onClick={() => handleNavClick('dashboard')}
+                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'dashboard'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('reports')}
+                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'reports'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Reports
+                  </button>
+                  <div className="h-px w-full bg-ink-700" />
+                  <span className="block px-4 py-2 text-body-sm text-ink-500">{user.email}</span>
+                  <button
+                    onClick={onLogout}
+                    className="block w-full text-left px-4 py-2 text-body-sm font-normal text-accent-dusk hover:text-red-400 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleNavClick('login')}
+                    className="block w-full text-left px-4 py-2 text-body-md font-normal text-ink-400 hover:text-ink-200 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('signup')}
+                    className="btn-primary mx-4 w-[calc(100%-2rem)]"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
     </header>
   )

@@ -5,6 +5,7 @@ import { Reports } from './pages/Reports'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Header } from './components/Header'
+import { ToastProvider } from './components/ui/Toast'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home')
@@ -36,15 +37,16 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header
-        user={user}
-        currentPage={currentPage}
-        onNavigate={setCurrentPage}
-        onLogout={handleLogout}
-      />
+    <ToastProvider>
+      <div className="min-h-screen bg-canvas">
+        <Header
+          user={user}
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
+          onLogout={handleLogout}
+        />
 
-      <main>
+        <main>
         {currentPage === 'home' && <Home onNavigate={setCurrentPage} />}
         {currentPage === 'login' && (
           <Login
@@ -74,6 +76,7 @@ export default function App() {
           <Home onNavigate={setCurrentPage} />
         )}
       </main>
-    </div>
+      </div>
+    </ToastProvider>
   )
 }

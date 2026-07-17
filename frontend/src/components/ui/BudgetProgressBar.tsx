@@ -1,0 +1,41 @@
+interface BudgetProgressBarProps {
+  spent: number
+  budgeted: number
+  color?: string
+}
+
+export function BudgetProgressBar({ spent, budgeted, color = '#ff7a17' }: BudgetProgressBarProps) {
+  const percentage = budgeted > 0 ? Math.min((spent / budgeted) * 100, 100) : 0
+
+  let barColor = color
+  if (percentage >= 90 && percentage < 100) {
+    barColor = '#fbbf24'
+  } else if (percentage >= 100) {
+    barColor = '#f87171'
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+          <span className="text-body-sm text-ink-300">
+            ${spent.toFixed(2)} / ${budgeted.toFixed(2)}
+          </span>
+        </div>
+        <span className="text-body-sm font-normal text-ink-400">
+          {percentage.toFixed(0)}%
+        </span>
+      </div>
+      <div className="w-full h-2 bg-canvas-soft rounded-full overflow-hidden">
+        <div
+          className="h-full transition-all duration-500 ease-out"
+          style={{ width: `${percentage}%`, backgroundColor: barColor }}
+        />
+      </div>
+    </div>
+  )
+}
