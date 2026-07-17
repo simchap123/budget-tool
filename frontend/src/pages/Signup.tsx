@@ -49,7 +49,24 @@ export function Signup({
     } catch (err: any) {
       console.error('Signup error:', err)
       console.error('Error response:', err.response?.data)
-      setError(err.response?.data?.message || err.message || 'Signup failed')
+
+      // Extract detailed error message from validation errors
+      const responseData = err.response?.data
+      let errorMessage = 'Signup failed'
+
+      if (responseData?.data?.email?.message) {
+        errorMessage = responseData.data.email.message
+      } else if (responseData?.data?.password?.message) {
+        errorMessage = responseData.data.password.message
+      } else if (responseData?.data?.name?.message) {
+        errorMessage = responseData.data.name.message
+      } else if (responseData?.message) {
+        errorMessage = responseData.message
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

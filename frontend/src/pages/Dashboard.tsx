@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { CSVImport } from '../components/CSVImport'
 
 export function Dashboard({ user }: { user: any }) {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '' })
   const [submitting, setSubmitting] = useState(false)
 
@@ -106,15 +108,32 @@ export function Dashboard({ user }: { user: any }) {
 
       {/* Add Transaction Form */}
       <div className="mt-12">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-display-sm">Transactions</h2>
-          <button
-            onClick={() => setFormOpen(!formOpen)}
-            className="btn-primary py-2 px-4"
-          >
-            {formOpen ? 'Cancel' : '+ Add Transaction'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFormOpen(!formOpen)}
+              className="btn-primary py-2 px-4"
+            >
+              {formOpen ? 'Cancel' : '+ Add Transaction'}
+            </button>
+            <button
+              onClick={() => setImportOpen(!importOpen)}
+              className="btn-secondary py-2 px-4"
+            >
+              {importOpen ? 'Cancel' : '📤 Import CSV'}
+            </button>
+          </div>
         </div>
+
+        {importOpen && (
+          <div className="mt-6">
+            <CSVImport onImportComplete={() => {
+              setImportOpen(false)
+              fetchTransactions()
+            }} />
+          </div>
+        )}
 
         {formOpen && (
           <div className="mt-6 card p-6">
