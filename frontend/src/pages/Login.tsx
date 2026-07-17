@@ -19,7 +19,7 @@ export function Login({
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8090/api`
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
       const response = await axios.post(
         `${apiUrl}/collections/users/auth-with-password`,
         { identity: email, password }

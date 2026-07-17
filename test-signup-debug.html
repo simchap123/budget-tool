@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Signup Test Debug</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .log { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #f5f5f5; max-height: 500px; overflow: auto; }
+        button { padding: 10px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Signup Test Debug</h1>
+    <button onclick="testSignup()">Test Signup</button>
+    <div class="log" id="log"></div>
+
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += msg + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function testSignup() {
+            document.getElementById('log').innerHTML = '';
+            const testEmail = `test${Date.now()}@example.com`;
+            const testName = `TestUser${Math.random().toString(36).substr(2, 9)}`;
+            const testPassword = 'TestPass123!';
+
+            log('Starting signup test...');
+            log(`Email: ${testEmail}`);
+            log(`Name: ${testName}`);
+
+            try {
+                log('');
+                log('Step 1: Creating user...');
+                const createResponse = await fetch('/api/collections/users/records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: testPassword,
+                        passwordConfirm: testPassword,
+                        name: testName
+                    })
+                });
+
+                log(`Status: ${createResponse.status}`);
+                const createData = await createResponse.json();
+                log(`Response: ${JSON.stringify(createData, null, 2)}`);
+
+                if (!createResponse.ok) {
+                    log('❌ User creation failed!');
+                    return;
+                }
+
+                log('✅ User created successfully');
+                log('');
+                log('Step 2: Logging in...');
+
+                const loginResponse = await fetch('/api/collections/users/auth-with-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        identity: testEmail,
+                        password: testPassword
+                    })
+                });
+
+                log(`Status: ${loginResponse.status}`);
+                const loginData = await loginResponse.json();
+
+                if (!loginData.token) {
+                    log(`Response: ${JSON.stringify(loginData, null, 2)}`);
+                    log('❌ Login failed - no token returned!');
+                    return;
+                }
+
+                log(`✅ Login successful!`);
+                log(`Token: ${loginData.token.substr(0, 20)}...`);
+                log(`User ID: ${loginData.record.id}`);
+                log(`User Name: ${loginData.record.name}`);
+                log('');
+                log('✅ FULL SIGNUP FLOW SUCCESSFUL!');
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                log(error.stack);
+            }
+        }
+
+        // Test on load
+        window.addEventListener('load', () => {
+            log('Page loaded. Ready to test.');
+            log(`Current URL: ${window.location.href}`);
+            log(`API base: /api`);
+        });
+    </script>
+</body>
+</html>

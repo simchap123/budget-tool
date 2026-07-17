@@ -27,22 +27,29 @@ export function Signup({
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8090/api`
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      console.log('Signup API URL:', apiUrl)
 
-      await axios.post(
+      console.log('Creating user...')
+      const createResponse = await axios.post(
         `${apiUrl}/collections/users/records`,
         { email, password, passwordConfirm, name }
       )
+      console.log('User created:', createResponse.data)
 
+      console.log('Logging in...')
       const loginResponse = await axios.post(
         `${apiUrl}/collections/users/auth-with-password`,
         { identity: email, password }
       )
+      console.log('Login response:', loginResponse.data)
 
       localStorage.setItem('pb_auth', JSON.stringify(loginResponse.data))
       onSuccess(loginResponse.data.record)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Signup failed')
+      console.error('Signup error:', err)
+      console.error('Error response:', err.response?.data)
+      setError(err.response?.data?.message || err.message || 'Signup failed')
     } finally {
       setLoading(false)
     }
