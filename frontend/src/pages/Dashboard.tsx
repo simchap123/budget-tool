@@ -406,6 +406,7 @@ export function Dashboard({ user }: { user: any }) {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search transactions by description or category…"
+              aria-label="Search transactions"
               className="input-base mt-2"
             />
             {filtered.length === 0 ? (
