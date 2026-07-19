@@ -43,6 +43,16 @@ export function formatShortDate(ymd: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// Timezone-safe full date with year ("Jul 1, 2026") from a stored date value.
+// Reads the calendar Y/M/D off the string (slicing any " 00:00:00.000Z" suffix)
+// instead of `new Date(str)`, which renders a UTC-midnight date as the previous
+// day in negative-UTC timezones.
+export function formatDate(value: string): string {
+  const [y, m, d] = String(value || '').slice(0, 10).split('-').map(Number)
+  if (!y || !m || !d) return ''
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 // Shift a "YYYY-MM" string by delta months, timezone-safe.
 export function shiftMonth(ym: string, delta: number): string {
   const [y, m] = ym.split('-').map(Number)

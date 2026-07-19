@@ -11,7 +11,7 @@ import { Pagination } from '../components/ui/Pagination'
 import { SkeletonTable } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { trackTransactionAction } from '../utils/analytics'
-import { monthRange } from '../utils/dateRange'
+import { monthRange, formatDate } from '../utils/dateRange'
 import { toCSV } from '../utils/csv'
 import { filterTransactions } from '../utils/search'
 import { reportTotals, txAmount } from '../utils/reportStats'
@@ -428,7 +428,7 @@ export function Dashboard({ user }: { user: any }) {
                 {filtered.slice((page - 1) * 25, page * 25).map((txn: any) => (
                   <tr key={txn.id}>
                     <td className="text-ink-300">
-                      {new Date(txn.date).toLocaleDateString()}
+                      {formatDate(txn.date)}
                     </td>
                     <td className="text-ink-300">
                       {txn.description}

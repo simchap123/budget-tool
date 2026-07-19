@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { monthRange, monthLabel, shiftMonth, normalizeDate, formatShortDate } from './dateRange'
+import { monthRange, monthLabel, shiftMonth, normalizeDate, formatShortDate, formatDate } from './dateRange'
 
 describe('monthRange', () => {
   it('returns an inclusive start and exclusive next-month end', () => {
@@ -57,5 +57,22 @@ describe('normalizeDate', () => {
     const d = normalizeDate('07-17-2026')
     const { start, endExclusive } = monthRange('2026-07')
     expect(d >= start && d < endExclusive).toBe(true)
+  })
+})
+
+describe('formatDate', () => {
+  it('formats a plain YYYY-MM-DD with year', () => {
+    expect(formatDate('2026-07-01')).toBe('Jul 1, 2026')
+  })
+  it('handles a stored UTC-midnight timestamp without shifting to the previous day', () => {
+    // new Date('2026-07-01 00:00:00.000Z').toLocaleDateString() would render Jun 30
+    // in negative-UTC zones; formatDate reads the calendar date off the string.
+    expect(formatDate('2026-07-01 00:00:00.000Z')).toBe('Jul 1, 2026')
+  })
+  it('keeps a mid-month date correct', () => {
+    expect(formatDate('2025-12-25 00:00:00.000Z')).toBe('Dec 25, 2025')
+  })
+  it('returns empty string for a missing/blank value', () => {
+    expect(formatDate('')).toBe('')
   })
 })
