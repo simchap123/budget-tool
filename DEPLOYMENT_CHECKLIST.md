@@ -409,12 +409,30 @@ Users can install the app:
 
 ---
 
-## Known Limitations
+## Live feature set (as of 2026-07-19)
 
-1. **PWA Icons**: Manifest references `/icon-192.png` and `/icon-512.png`. These need to be created/uploaded to `frontend/public/`.
-2. **Analytics Data**: Only stores last 90 days (auto-purges older events)
-3. **No Backend**: Analytics stored entirely in browser IndexedDB (privacy-first, no server storage)
-4. **Budget Sync**: Budget page requires `budgets` PocketBase collection to be created manually
+Deployed and verified end-to-end at **https://budget.grotketech.com** (all 6 apps
+on the droplet now live under grotketech.com subdomains, wildcard SSL):
+
+- **Transactions** — add / edit / delete, month filter, client-side pagination, correct monthly totals
+- **AI category suggestions** — auto-fills a category from your own history on description blur (`/api/ai/suggest-category`; Gemini fallback wired, needs GCP billing)
+- **Budget** — create / edit / delete, spent-vs-budget with color states, **"Suggest from spending"** (auto-budgets from average monthly spend)
+- **Categories** — create / edit / delete (owner-scoped rules)
+- **Reports** — Recharts trend + category charts, month/year filter
+- **Recurring** — subscription/bill detection + upcoming-bill forecast (`merchant`/`recurring` utils)
+- **CSV Import** — RFC-4180 parser, date normalization, rate-limit-resilient
+- **Plaid** — link-token / exchange / sync (production + OAuth); sandbox-proven. Chase blocked on Plaid production enrollment (external)
+- **PWA** — network-first service worker, real icons; **Analytics** (IndexedDB)
+- **Tests** — Vitest suite (`npm test`), 28 tests over the date / CSV / merchant / recurring / budget-suggest logic
+
+### Resolved former limitations
+- ~~PWA icons missing~~ → generated (`favicon.svg`, `icon-192/512.png`)
+- ~~`budgets` collection manual~~ → created on the server (owner-scoped rules)
+- Analytics is intentionally client-side IndexedDB (privacy-first), last 90 days
+
+### Open items (external, not code)
+- **Chase live sync** — requires Plaid↔Chase production enrollment on the Plaid account
+- **Gemini** — enable billing on the GCP project (history-based suggestions work without it)
 
 ---
 
