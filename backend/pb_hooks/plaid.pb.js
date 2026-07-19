@@ -63,7 +63,7 @@ routerAdd("POST", "/api/plaid/exchange-public-token", (c) => {
 // POST /api/plaid/sync  -> pulls transactions for all of the user's linked items
 routerAdd("POST", "/api/plaid/sync", (c) => {
   try {
-    const { plaidCall, mapTxn } = require(`${__hooks}/plaid_lib.js`);
+    const { plaidCall, mapTxn, syncFields } = require(`${__hooks}/plaid_lib.js`);
     const user = $apis.requestInfo(c).authRecord;
     const dao = $app.dao();
     const items = dao.findRecordsByFilter(
@@ -101,13 +101,8 @@ routerAdd("POST", "/api/plaid/sync", (c) => {
           (page.modified || []).forEach((t) => {
             const existing = findByPlaidId(t.transaction_id);
             const rec = existing || new Record(txCollection);
-            const m = mapTxn(t, user.id);
-            for (const k in m) {
-              // Keep the user's own category on a transaction they've already
-              // seen — Plaid owns the money fields, the user owns categorization.
-              if (existing && k === "category") continue;
-              rec.set(k, m[k]);
-            }
+            const fields = syncFields(mapTxn(t, user.id), !!existing);
+            for (const k in fields) rec.set(k, fields[k]);
             dao.saveRecord(rec);
             modified++;
           });
@@ -260,7 +255,7 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
       return c.json(401, { error: "unauthorized" });
     }
 
-    const { plaidCall, mapTxn } = require(`${__hooks}/plaid_lib.js`);
+    const { plaidCall, mapTxn, syncFields } = require(`${__hooks}/plaid_lib.js`);
     const body = $apis.requestInfo(c).data || {};
     // Observability: log receipt (type/code only — never tokens) so a real
     // connection (e.g. Chase) is traceable in `pm2 logs budget-tool-pocketbase`.
@@ -288,12 +283,8 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
         (page.modified || []).forEach((t) => {
           const existing = findByPlaidId(t.transaction_id);
           const r = existing || new Record(txCol);
-          const m = mapTxn(t, userId);
-          for (const k in m) {
-            // Preserve the user's category on a transaction they've already seen.
-            if (existing && k === "category") continue;
-            r.set(k, m[k]);
-          }
+          const fields = syncFields(mapTxn(t, userId), !!existing);
+          for (const k in fields) r.set(k, fields[k]);
           dao.saveRecord(r);
         });
         (page.removed || []).forEach((rm) => {

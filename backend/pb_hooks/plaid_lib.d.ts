@@ -26,3 +26,9 @@ export interface MappedTransaction {
 
 export function mapTxn(t: PlaidTransaction, userId: string): MappedTransaction
 export function plaidCall(path: string, payload: Record<string, unknown>): unknown
+
+/** Fields to write when syncing: preserves the user's category on an existing txn. */
+export function syncFields(
+  mapped: Record<string, unknown>,
+  isExisting: boolean
+): Record<string, unknown>

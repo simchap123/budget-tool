@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 // The Plaid mapping is the backend's canonical source; import it directly so this
 // test guards the real function (no duplicated logic that could drift).
-import { mapTxn } from '../../../backend/pb_hooks/plaid_lib.js'
+import { mapTxn, syncFields } from '../../../backend/pb_hooks/plaid_lib.js'
 
 // The single most important invariant in the whole Plaid integration:
 // Plaid amount > 0 means money OUT (expense); amount < 0 means money IN (income).
@@ -50,5 +50,22 @@ describe('mapTxn — passthrough fields', () => {
     expect(t.date).toBe('2026-07-15 00:00:00.000Z')
     expect(t.plaidId).toBe('txn_9')
     expect(t.userId).toBe('user_7')
+  })
+})
+
+describe('syncFields — category preservation on sync', () => {
+  const mapped = { amount: 5, description: 'Coffee', type: 'expense', category: 'Food And Drink', date: 'd', userId: 'u', plaidId: 'p' }
+
+  it('writes every field for a brand-new transaction', () => {
+    expect(syncFields(mapped, false)).toEqual(mapped)
+  })
+
+  it("preserves the user's category on an existing transaction (omits category)", () => {
+    const out = syncFields(mapped, true)
+    expect(out.category).toBeUndefined()
+    // Money fields still come from Plaid.
+    expect(out.amount).toBe(5)
+    expect(out.description).toBe('Coffee')
+    expect(out.date).toBe('d')
   })
 })

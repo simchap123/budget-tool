@@ -54,4 +54,17 @@ function mapTxn(t, userId) {
   };
 }
 
-module.exports = { plaidCall, mapTxn };
+// Which mapped fields to write when syncing a Plaid transaction onto a record.
+// On a transaction already stored (isExisting), Plaid owns the money fields but
+// the user owns categorization — so the user's category is preserved, not
+// overwritten. On a brand-new transaction, every field is written.
+function syncFields(mapped, isExisting) {
+  const out = {};
+  for (const k in mapped) {
+    if (isExisting && k === "category") continue;
+    out[k] = mapped[k];
+  }
+  return out;
+}
+
+module.exports = { plaidCall, mapTxn, syncFields };
