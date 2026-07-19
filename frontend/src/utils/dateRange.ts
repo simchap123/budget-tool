@@ -9,3 +9,17 @@ export function monthRange(ym: string): { start: string; endExclusive: string } 
   const endExclusive = `${ny}-${String(nm).padStart(2, '0')}-01`
   return { start, endExclusive }
 }
+
+// Timezone-safe "July 2026" label for a "YYYY-MM" string.
+// Uses the local Date constructor (not string parsing) so it never shifts a day.
+export function monthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+// Shift a "YYYY-MM" string by delta months, timezone-safe.
+export function shiftMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}

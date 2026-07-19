@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Percent, ChevronLeft, ChevronRight } from 'lucide-react'
-import { monthRange } from '../utils/dateRange'
+import { monthRange, monthLabel, shiftMonth } from '../utils/dateRange'
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -132,17 +132,8 @@ export function Reports() {
 
   const COLORS = ['#f97316', '#06b6d4', '#10b981', '#eab308', '#a855f7', '#ec4899', '#3b82f6', '#f59e0b']
 
-  const handlePrevMonth = () => {
-    const date = new Date(currentMonth)
-    date.setMonth(date.getMonth() - 1)
-    setCurrentMonth(date.toISOString().slice(0, 7))
-  }
-
-  const handleNextMonth = () => {
-    const date = new Date(currentMonth)
-    date.setMonth(date.getMonth() + 1)
-    setCurrentMonth(date.toISOString().slice(0, 7))
-  }
+  const handlePrevMonth = () => setCurrentMonth(shiftMonth(currentMonth, -1))
+  const handleNextMonth = () => setCurrentMonth(shiftMonth(currentMonth, 1))
 
   if (loading) {
     return (
@@ -190,7 +181,7 @@ export function Reports() {
               <ChevronLeft size={20} />
             </button>
             <span className="text-body-md min-w-[150px] text-center">
-              {new Date(currentMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {monthLabel(currentMonth)}
             </span>
             <button onClick={handleNextMonth} className="p-1 hover:bg-ink-700 rounded transition-colors">
               <ChevronRight size={20} />

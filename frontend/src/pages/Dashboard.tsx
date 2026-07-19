@@ -28,7 +28,7 @@ export function Dashboard({ user }: { user: any }) {
 
   useEffect(() => {
     fetchTransactions()
-  }, [page, selectedMonth])
+  }, [selectedMonth])
 
   const fetchTransactions = async () => {
     try {
@@ -38,16 +38,19 @@ export function Dashboard({ user }: { user: any }) {
       const { start: monthStart, endExclusive } = monthRange(selectedMonth)
       const filter = `(date>='${monthStart}'&&date<'${endExclusive}')`
 
+      // Fetch the whole month so the Income/Expenses/Net totals are correct;
+      // paginate the table client-side (25/page).
       const response = await axios.get(
-        `${apiUrl}/collections/transactions/records?perPage=25&page=${page}&filter=${encodeURIComponent(filter)}&sort=-date`,
+        `${apiUrl}/collections/transactions/records?perPage=500&filter=${encodeURIComponent(filter)}&sort=-date`,
         {
           headers: {
             Authorization: `Bearer ${auth.token}`,
           },
         }
       )
-      setTransactions(response.data.items || [])
-      setTotalPages(response.data.totalPages || 1)
+      const items = response.data.items || []
+      setTransactions(items)
+      setTotalPages(Math.max(1, Math.ceil(items.length / 25)))
     } catch (err: any) {
       console.error('Error fetching transactions:', err)
       setError('Failed to load transactions')
@@ -367,7 +370,7 @@ export function Dashboard({ user }: { user: any }) {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((txn: any) => (
+                {transactions.slice((page - 1) * 25, page * 25).map((txn: any) => (
                   <tr key={txn.id}>
                     <td className="text-ink-300">
                       {new Date(txn.date).toLocaleDateString()}

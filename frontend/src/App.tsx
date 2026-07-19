@@ -21,7 +21,9 @@ export default function App() {
     const token = localStorage.getItem('pb_auth')
     if (token) {
       const userData = JSON.parse(token)
-      setUser(userData)
+      // pb_auth stores the full auth response { token, record }. Login/Signup pass
+      // the record directly, so normalize to the record for a consistent shape.
+      setUser(userData.record || userData)
       setCurrentPage('dashboard')
       initAnalytics(userData.record?.id || 'anonymous')
     }
