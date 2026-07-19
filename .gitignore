@@ -50,3 +50,6 @@ pocketbase.log
 dist/
 build/
 *.pem
+
+# Playwright MCP run artifacts
+.playwright-mcp/
