@@ -11,6 +11,7 @@ import { SkeletonTable } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { trackTransactionAction } from '../utils/analytics'
 import { monthRange } from '../utils/dateRange'
+import { toCSV } from '../utils/csv'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -176,6 +177,23 @@ export function Dashboard({ user }: { user: any }) {
     }
   }
 
+  const handleExport = () => {
+    const rows = (transactions as any[]).map((t) => ({
+      Date: String(t.date || '').slice(0, 10),
+      Description: t.description,
+      Amount: (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount ?? 0).toFixed(2),
+      Type: t.type,
+      Category: t.category || 'Uncategorized',
+    }))
+    const csv = toCSV(rows, ['Date', 'Description', 'Amount', 'Type', 'Category'])
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `budget-${selectedMonth}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const calculateStats = () => {
     const income = transactions
       .filter((t: any) => t.type === 'income')
@@ -252,6 +270,15 @@ export function Dashboard({ user }: { user: any }) {
             >
               {importOpen ? 'Cancel' : '📤 Import CSV'}
             </button>
+            {transactions.length > 0 && (
+              <button
+                onClick={handleExport}
+                className="btn-secondary py-2 px-4"
+                title="Download this month's transactions as CSV"
+              >
+                ⬇ Export
+              </button>
+            )}
           </div>
         </div>
 

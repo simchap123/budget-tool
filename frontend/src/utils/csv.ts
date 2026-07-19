@@ -23,3 +23,15 @@ export function parseCSVLine(line: string): string[] {
   result.push(current.trim())
   return result
 }
+
+// Serialize rows to CSV, quoting any field that contains a comma, quote, or
+// newline (RFC 4180). `columns` are the header keys, in order.
+export function toCSV(rows: Record<string, unknown>[], columns: string[]): string {
+  const esc = (v: unknown) => {
+    const s = v == null ? '' : String(v)
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+  }
+  const header = columns.join(',')
+  const body = rows.map((r) => columns.map((c) => esc(r[c])).join(',')).join('\n')
+  return rows.length ? header + '\n' + body : header
+}
