@@ -5,6 +5,7 @@ import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { monthRange } from '../utils/dateRange'
+import { averageMonthlySpend } from '../utils/budgetSuggest'
 
 interface Budget {
   id: string
@@ -30,6 +31,7 @@ export function Budget() {
   const [formData, setFormData] = useState({ category: '', budgetAmount: '' })
   const [submitting, setSubmitting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [suggesting, setSuggesting] = useState(false)
 
   useEffect(() => {
     fetchBudgetData()
@@ -155,6 +157,49 @@ export function Budget() {
     }
   }
 
+  const handleSuggestBudgets = async () => {
+    setSuggesting(true)
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth() + 1
+      // Look back 4 months of expenses.
+      const since = new Date(currentDate.getFullYear(), currentDate.getMonth() - 3, 1)
+      const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-01`
+      const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
+      const res = await axios.get(
+        `${apiUrl}/collections/transactions/records?perPage=500&filter=${filter}&sort=-date`,
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      )
+      const avg = averageMonthlySpend(res.data.items || [])
+      const existing = new Set(budgets.map((b) => b.categoryName))
+      const toCreate = Object.entries(avg)
+        .filter(([cat, amt]) => amt > 0 && !existing.has(cat))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+
+      if (toCreate.length === 0) {
+        toast.info('No new suggestions — you already have budgets for your spending')
+        return
+      }
+      for (const [category, budgetAmount] of toCreate) {
+        await axios.post(
+          `${apiUrl}/collections/budgets/records`,
+          { category, budgetAmount, year, month, userId: auth.record.id },
+          { headers: { Authorization: `Bearer ${auth.token}` } }
+        )
+      }
+      toast.success(`Created ${toCreate.length} budget${toCreate.length === 1 ? '' : 's'} from your average spend`)
+      await fetchBudgetData()
+    } catch (err) {
+      console.error('Error suggesting budgets:', err)
+      toast.error('Failed to suggest budgets')
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
   const handleDeleteBudget = async (id: string) => {
     try {
       const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -196,12 +241,22 @@ export function Budget() {
           <h1 className="text-display-lg">Budget</h1>
           <p className="mt-2 text-ink-400">Zero-based budgeting for {monthYear}</p>
         </div>
-        <button
-          onClick={() => (showForm ? setShowForm(false) : openNewBudget())}
-          className="btn-primary py-2 px-4 shrink-0"
-        >
-          {showForm ? 'Cancel' : '+ Set Budget'}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={handleSuggestBudgets}
+            disabled={suggesting}
+            className="btn-secondary py-2 px-4 disabled:opacity-50"
+            title="Create budgets from your average monthly spend"
+          >
+            {suggesting ? 'Suggesting…' : 'Suggest from spending'}
+          </button>
+          <button
+            onClick={() => (showForm ? setShowForm(false) : openNewBudget())}
+            className="btn-primary py-2 px-4"
+          >
+            {showForm ? 'Cancel' : '+ Set Budget'}
+          </button>
+        </div>
       </div>
 
       {/* Budget Form */}

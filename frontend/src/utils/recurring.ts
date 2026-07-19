@@ -5,6 +5,7 @@ export interface RawTxn {
   amount: number | string
   type: string
   date: string
+  category?: string
 }
 
 export interface RecurringItem {
