@@ -5,6 +5,7 @@ import { monthRange, monthLabel, shiftMonth } from '../utils/dateRange'
 import { categorySpendingTrend, TrendPoint } from '../utils/categoryTrend'
 import { reportTotals, categoryBreakdown, monthlyTrend } from '../utils/reportStats'
 import { fetchAllRecords } from '../utils/fetchAll'
+import { TransactionsModal } from '../components/ui/TransactionsModal'
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -13,6 +14,7 @@ export function Reports() {
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7))
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [catTrend, setCatTrend] = useState<{ data: TrendPoint[]; categories: string[] }>({ data: [], categories: [] })
+  const [drill, setDrill] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTransactions()
@@ -293,7 +295,16 @@ export function Reports() {
               <tbody>
                 {categoryStats.map((cat) => (
                   <tr key={cat.name}>
-                    <td className="text-ink-300 font-medium">{cat.name}</td>
+                    <td className="text-ink-300 font-medium">
+                      <button
+                        type="button"
+                        onClick={() => setDrill(cat.name)}
+                        className="text-left hover:text-ink-100 underline decoration-dotted decoration-ink-600 underline-offset-4"
+                        title="See transactions"
+                      >
+                        {cat.name}
+                      </button>
+                    </td>
                     <td className="text-right">
                       <span className="inline-block px-2 py-1 bg-accent-breeze text-canvas text-body-sm rounded-full font-medium">
                         {cat.count}
@@ -315,6 +326,22 @@ export function Reports() {
           </div>
         )}
       </div>
+
+      {drill && (() => {
+        const since = filterType === 'month' ? monthRange(currentMonth).start : `${currentYear}-01-01`
+        const until = filterType === 'month' ? monthRange(currentMonth).endExclusive : `${currentYear + 1}-01-01`
+        const label = filterType === 'month' ? monthLabel(currentMonth) : String(currentYear)
+        return (
+          <TransactionsModal
+            title={drill}
+            subtitle={`${label} · all transactions in this category`}
+            category={drill}
+            since={since}
+            until={until}
+            onClose={() => setDrill(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

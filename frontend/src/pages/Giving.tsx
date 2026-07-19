@@ -7,6 +7,8 @@ import { computeGiving, GivingSummary } from '../utils/givingCalc'
 import { monthLabel } from '../utils/dateRange'
 import { fetchAllRecords } from '../utils/fetchAll'
 import { CategorySelect } from '../components/ui/CategorySelect'
+import { TransactionsModal } from '../components/ui/TransactionsModal'
+import { monthRange } from '../utils/dateRange'
 
 export function Giving() {
   const toast = useToast()
@@ -17,6 +19,7 @@ export function Giving() {
   const [percent, setPercent] = useState('10')
   const [category, setCategory] = useState('')
   const [incomeCategory, setIncomeCategory] = useState('')
+  const [drill, setDrill] = useState<'month' | 'all' | null>(null)
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const auth = () => JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -173,7 +176,9 @@ export function Giving() {
           </div>
           <div>
             <p className="text-body-sm text-ink-500">Given</p>
-            <p className="text-lg text-accent-sunset">${current.given.toFixed(2)}</p>
+            <button type="button" onClick={() => category && setDrill('month')} className="text-lg text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See this month's giving">
+              ${current.given.toFixed(2)}
+            </button>
           </div>
         </div>
         <p className="mt-3 text-center text-body-sm">
@@ -187,7 +192,12 @@ export function Giving() {
       <div className="mt-6 card p-6">
         <h3 className="text-body-sm text-ink-400">All-time</h3>
         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div><p className="text-body-sm text-ink-500">Total given</p><p className="text-2xl text-accent-sunset">${summary.totalGiven.toFixed(2)}</p></div>
+          <div>
+            <p className="text-body-sm text-ink-500">Total given</p>
+            <button type="button" onClick={() => category && setDrill('all')} className="text-2xl text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See all giving transactions">
+              ${summary.totalGiven.toFixed(2)}
+            </button>
+          </div>
           <div><p className="text-body-sm text-ink-500">Total target</p><p className="text-2xl text-accent-twilight">${summary.totalTarget.toFixed(2)}</p></div>
           <div>
             <p className="text-body-sm text-ink-500">{summary.balance >= 0 ? 'Ahead by' : 'Behind by'}</p>
@@ -218,6 +228,18 @@ export function Giving() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {drill && (
+        <TransactionsModal
+          title={`${category} giving`}
+          subtitle={drill === 'month' ? `${monthLabel(thisMonth)} · giving transactions` : 'All-time giving transactions'}
+          category={category}
+          type="expense"
+          since={drill === 'month' ? monthRange(thisMonth).start : undefined}
+          until={drill === 'month' ? monthRange(thisMonth).endExclusive : undefined}
+          onClose={() => setDrill(null)}
+        />
       )}
     </div>
   )

@@ -5,6 +5,7 @@ import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { CategorySelect } from '../components/ui/CategorySelect'
+import { TransactionsModal } from '../components/ui/TransactionsModal'
 import { monthRange } from '../utils/dateRange'
 import { averageMonthlySpend } from '../utils/budgetSuggest'
 import { txAmount } from '../utils/reportStats'
@@ -35,6 +36,7 @@ export function Budget() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [suggesting, setSuggesting] = useState(false)
+  const [drill, setDrill] = useState<string | null>(null)
 
   useEffect(() => {
     fetchBudgetData()
@@ -375,12 +377,17 @@ export function Budget() {
               return (
                 <div key={budget.id} className="card p-4">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <p className="font-normal text-ink-50">{budget.categoryName}</p>
+                    <button
+                      type="button"
+                      onClick={() => setDrill(budget.categoryName)}
+                      className="flex-1 text-left hover:opacity-80 transition-opacity"
+                      title="See transactions"
+                    >
+                      <p className="font-normal text-ink-50 underline decoration-dotted decoration-ink-600 underline-offset-4">{budget.categoryName}</p>
                       <p className="mt-1 text-body-sm text-ink-400">
                         ${spent.toFixed(2)} of ${budget.budgetAmount.toFixed(2)}
                       </p>
-                    </div>
+                    </button>
                     <div className="flex items-center gap-3">
                       <p className={`text-body-sm font-normal ${
                         percent > 100 ? 'text-red-400' :
@@ -442,6 +449,22 @@ export function Budget() {
           Remove this budget? Your transactions in this category are not affected.
         </p>
       </Modal>
+
+      {drill && (() => {
+        const ym = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
+        const { start, endExclusive } = monthRange(ym)
+        return (
+          <TransactionsModal
+            title={drill}
+            subtitle={`${monthYear} · spending in this category`}
+            category={drill}
+            type="expense"
+            since={start}
+            until={endExclusive}
+            onClose={() => setDrill(null)}
+          />
+        )
+      })()}
     </div>
   )
 }
