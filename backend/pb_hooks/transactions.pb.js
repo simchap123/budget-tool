@@ -11,12 +11,18 @@ routerAdd("POST", "/api/rpc/bulk-recategorize", (c) => {
     const user = info.authRecord;
     const term = String((info.data && info.data.term) || "").trim();
     const category = String((info.data && info.data.category) || "").trim();
+    const exact = !!(info.data && info.data.exact);
     if (!term || !category) throw new Error("term and category are required");
 
     const dao = $app.dao();
+    // exact => same description (propagate a change to identical transactions);
+    // otherwise => description contains the term (merchant/keyword cleanup).
+    const filter = exact
+      ? "userId = {:u} && description = {:t}"
+      : "userId = {:u} && description ~ {:t}";
     const records = dao.findRecordsByFilter(
       "transactions",
-      "userId = {:u} && description ~ {:t}",
+      filter,
       "-created",
       10000,
       0,
@@ -35,3 +41,22 @@ routerAdd("POST", "/api/rpc/bulk-recategorize", (c) => {
     return c.json(400, { error: String((err && err.message) || err) });
   }
 }, $apis.requireRecordAuth());
+
+// Auto-categorize on create. When a transaction is added (manual entry or CSV
+// import) with no real category, apply the CSV-derived rule table so new
+// activity lands in the right bucket the same way existing history was labeled.
+// Wrapped in try/catch: a categorization miss must never block the create.
+onRecordBeforeCreateRequest((e) => {
+  try {
+    const cur = String(e.record.get("category") || "").trim();
+    if (cur && cur !== "Random" && cur !== "Uncategorized") return;
+    // categorize_lib.js is generated from the user's labeled history and is
+    // gitignored (it embeds real payee names); if it's absent the require throws
+    // and the catch below leaves the category untouched.
+    const { categorize } = require(`${__hooks}/categorize_lib.js`);
+    const cat = categorize(e.record.get("description"));
+    if (cat) e.record.set("category", cat);
+  } catch (err) {
+    // ignore — leave the category as-is
+  }
+}, "transactions");

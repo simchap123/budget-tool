@@ -54,5 +54,16 @@ build/
 # Playwright MCP run artifacts
 .playwright-mcp/
 
+# Debug screenshots
+chase-500-live.png
+plaid-step1.png
+
+# Personal financial data — the categorizer is generated from the user's own
+# labeled transactions and embeds real payee names (Zelle recipients, etc.).
+# This repo is public, so these stay on the private droplet only, never committed.
+backend/pb_hooks/categorize_lib.js
+backend/pb_hooks/categorize_rules.json
+frontend/src/utils/categorize.test.ts
+
 # harness artifact
 frontend/.claude/

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { fetchAllRecords } from '../utils/fetchAll'
 
-// The user's distinct categories, derived from their transactions (categories
-// often live only as strings on transactions, not as category records). Cached
-// module-wide so the dropdowns don't refetch on every mount.
+// The user's category list. Two sources, merged and de-duplicated:
+//   1. the `categories` collection — the canonical list the user maintains
+//      (so brand-new categories show up before any transaction uses them);
+//   2. distinct category strings already on their transactions (covers anything
+//      imported that isn't in the collection yet).
+// Cached module-wide so the dropdowns don't refetch on every mount.
 let cache: string[] | null = null
 
 export function useCategories(): string[] {
@@ -13,9 +16,17 @@ export function useCategories(): string[] {
     if (cache) return
     const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
     const apiUrl = import.meta.env.VITE_API_URL || '/api'
-    fetchAllRecords(apiUrl, 'transactions', 'fields=category', { Authorization: `Bearer ${auth.token}` })
-      .then((items) => {
-        const list = Array.from(new Set(items.map((t: any) => t.category).filter(Boolean))).sort() as string[]
+    const headers = { Authorization: `Bearer ${auth.token}` }
+    Promise.all([
+      fetchAllRecords(apiUrl, 'categories', 'fields=name', headers).catch(() => []),
+      fetchAllRecords(apiUrl, 'transactions', 'fields=category', headers).catch(() => []),
+    ])
+      .then(([cols, txns]) => {
+        const names = [
+          ...cols.map((c: any) => c.name),
+          ...txns.map((t: any) => t.category),
+        ]
+        const list = Array.from(new Set(names.filter(Boolean))).sort() as string[]
         cache = list
         setCats(list)
       })

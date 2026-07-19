@@ -16,7 +16,7 @@ import { toCSV } from '../utils/csv'
 import { filterTransactions } from '../utils/search'
 import { reportTotals, txAmount } from '../utils/reportStats'
 import { CategorySelect } from '../components/ui/CategorySelect'
-import { useCategories } from '../hooks/useCategories'
+import { useCategories, invalidateCategories } from '../hooks/useCategories'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -26,6 +26,7 @@ export function Dashboard({ user }: { user: any }) {
   const [formOpen, setFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingOriginal, setEditingOriginal] = useState<{ category: string; description: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '', note: '', date: new Date().toISOString().split('T')[0] })
   const categories = useCategories()
@@ -92,6 +93,28 @@ export function Dashboard({ user }: { user: any }) {
           }
         )
         trackTransactionAction('edit', formData.type)
+
+        // Category propagation: if the user changed the category, apply the same
+        // category to every other transaction with the identical description
+        // (e.g. all "POS DEBIT GLAUBERS BAKERY" rows follow one edit).
+        const newCat = formData.category || 'Uncategorized'
+        const desc = formData.description || ''
+        if (editingOriginal && editingOriginal.category !== newCat && desc.trim()) {
+          try {
+            const res = await axios.post(
+              `${apiUrl}/rpc/bulk-recategorize`,
+              { term: desc, category: newCat, exact: true },
+              { headers: { Authorization: `Bearer ${auth.token}` } }
+            )
+            const also = (res.data?.updated || 0) - 1 // exclude the row just edited
+            if (also > 0) {
+              toast.success(`Also set "${newCat}" on ${also} matching transaction${also === 1 ? '' : 's'}`)
+              invalidateCategories()
+            }
+          } catch (err) {
+            console.error('Category propagation failed:', err)
+          }
+        }
       } else {
         // Create new transaction
         await axios.post(
@@ -117,6 +140,7 @@ export function Dashboard({ user }: { user: any }) {
       setFormData({ amount: '', description: '', type: 'expense', category: '', note: '', date: new Date().toISOString().split('T')[0] })
       setFormOpen(false)
       setEditingId(null)
+      setEditingOriginal(null)
       await fetchTransactions()
     } catch (err: any) {
       console.error('Error saving transaction:', err)
@@ -151,6 +175,7 @@ export function Dashboard({ user }: { user: any }) {
 
   const handleEditTransaction = (txn: any) => {
     setEditingId(txn.id)
+    setEditingOriginal({ category: txn.category || 'Uncategorized', description: txn.description || '' })
     setFormData({
       amount: txn.amount.toString(),
       description: txn.description,
