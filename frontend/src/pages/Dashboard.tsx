@@ -14,7 +14,7 @@ import { trackTransactionAction } from '../utils/analytics'
 import { monthRange } from '../utils/dateRange'
 import { toCSV } from '../utils/csv'
 import { filterTransactions } from '../utils/search'
-import { reportTotals } from '../utils/reportStats'
+import { reportTotals, txAmount } from '../utils/reportStats'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -185,7 +185,7 @@ export function Dashboard({ user }: { user: any }) {
     const rows = (transactions as any[]).map((t) => ({
       Date: String(t.date || '').slice(0, 10),
       Description: t.description,
-      Amount: (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount ?? 0).toFixed(2),
+      Amount: txAmount(t).toFixed(2),
       Type: t.type,
       Category: t.category || 'Uncategorized',
       Note: t.note || '',

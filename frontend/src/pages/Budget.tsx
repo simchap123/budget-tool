@@ -6,6 +6,7 @@ import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { monthRange } from '../utils/dateRange'
 import { averageMonthlySpend } from '../utils/budgetSuggest'
+import { txAmount } from '../utils/reportStats'
 
 interface Budget {
   id: string
@@ -66,8 +67,7 @@ export function Budget() {
       const categorySpent: { [key: string]: number } = {}
       txns.forEach((txn: any) => {
         const key = txn.category || 'Uncategorized'
-        const amount = typeof txn.amount === 'string' ? parseFloat(txn.amount) : txn.amount
-        categorySpent[key] = (categorySpent[key] || 0) + amount
+        categorySpent[key] = (categorySpent[key] || 0) + txAmount(txn)
       })
 
       setBudgets((budgetResponse.data.items || []).map((b: any) => ({
