@@ -14,7 +14,6 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
   const [target, setTarget] = useState('')
   const [matches, setMatches] = useState<any[] | null>(null)
   const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState(0)
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const auth = () => JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -49,20 +48,22 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
     if (!matches?.length || !target.trim()) return
     if (!window.confirm(`Recategorize ${matches.length} transaction(s) matching "${term.trim()}" to "${target.trim()}"? This can't be undone in bulk.`)) return
     setBusy(true)
-    setProgress(0)
-    let done = 0
-    for (const m of matches) {
-      try {
-        await axios.patch(`${apiUrl}/collections/transactions/records/${m.id}`, { category: target.trim() }, { headers: headers() })
-        done++
-      } catch { /* skip failures */ }
-      setProgress(done)
+    try {
+      // One server-side pass — fast and reliable even for hundreds of rows.
+      const { data } = await axios.post(
+        `${apiUrl}/rpc/bulk-recategorize`,
+        { term: term.trim(), category: target.trim() },
+        { headers: headers() }
+      )
+      toast.success(`Recategorized ${data.updated} transaction(s) to "${target.trim()}"`)
+      setMatches(null)
+      setTerm('')
+      onDone()
+    } catch (e: any) {
+      toast.error('Recategorize failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setBusy(false)
     }
-    toast.success(`Recategorized ${done} of ${matches.length} to "${target.trim()}"`)
-    setMatches(null)
-    setTerm('')
-    setBusy(false)
-    onDone()
   }
 
   return (
@@ -119,7 +120,7 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
                   </datalist>
                 </div>
                 <button onClick={apply} disabled={busy || !target.trim()} className="btn-primary py-2 px-4 disabled:opacity-50">
-                  {busy ? `Applying… ${progress}/${matches.length}` : `Recategorize ${matches.length}`}
+                  {busy ? 'Applying…' : `Recategorize ${matches.length}`}
                 </button>
               </div>
             </>
