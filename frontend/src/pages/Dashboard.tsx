@@ -12,6 +12,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { trackTransactionAction } from '../utils/analytics'
 import { monthRange } from '../utils/dateRange'
 import { toCSV } from '../utils/csv'
+import { filterTransactions } from '../utils/search'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -25,8 +26,8 @@ export function Dashboard({ user }: { user: any }) {
   const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0] })
   const [submitting, setSubmitting] = useState(false)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     fetchTransactions()
@@ -50,9 +51,7 @@ export function Dashboard({ user }: { user: any }) {
           },
         }
       )
-      const items = response.data.items || []
-      setTransactions(items)
-      setTotalPages(Math.max(1, Math.ceil(items.length / 25)))
+      setTransactions(response.data.items || [])
     } catch (err: any) {
       console.error('Error fetching transactions:', err)
       setError('Failed to load transactions')
@@ -211,6 +210,9 @@ export function Dashboard({ user }: { user: any }) {
   }
 
   const stats = calculateStats()
+  // Search filters the displayed list (monthly totals above stay for the month).
+  const filtered = filterTransactions(transactions as any[], search)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / 25))
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
@@ -391,7 +393,20 @@ export function Dashboard({ user }: { user: any }) {
             action={{ label: '+ Add Transaction', onClick: () => setFormOpen(true) }}
           />
         ) : (
-          <div className="mt-6 overflow-x-auto rounded-sm border border-ink-700">
+          <>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Search transactions by description or category…"
+              className="input-base mt-2"
+            />
+            {filtered.length === 0 ? (
+              <div className="card p-8 text-center text-ink-400 mt-4">
+                No transactions match &ldquo;{search}&rdquo;.
+              </div>
+            ) : (
+          <div className="mt-4 overflow-x-auto rounded-sm border border-ink-700">
             <table className="table-minimal">
               <thead>
                 <tr>
@@ -403,7 +418,7 @@ export function Dashboard({ user }: { user: any }) {
                 </tr>
               </thead>
               <tbody>
-                {transactions.slice((page - 1) * 25, page * 25).map((txn: any) => (
+                {filtered.slice((page - 1) * 25, page * 25).map((txn: any) => (
                   <tr key={txn.id}>
                     <td className="text-ink-300">
                       {new Date(txn.date).toLocaleDateString()}
@@ -434,9 +449,11 @@ export function Dashboard({ user }: { user: any }) {
               </tbody>
             </table>
           </div>
+            )}
+          </>
         )}
 
-        {transactions.length > 0 && totalPages > 1 && (
+        {filtered.length > 0 && totalPages > 1 && (
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         )}
       </div>
