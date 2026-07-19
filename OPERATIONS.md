@@ -6,27 +6,42 @@ actions (dashboards, not code) plus day-to-day ops.
 
 ---
 
-## 1. Finish live Chase sync (Plaid)
+## 1. Connect Chase (Plaid — fully built)
 
-The Plaid integration is fully built and proven in sandbox (48 txns synced). Chase's
-OAuth server currently returns a 500 because **Chase isn't yet enabled for your
-Plaid production account** — this is an approval step on Plaid's side, not a bug.
+The full Plaid **Hosted Link** flow is built, secured, and verified end-to-end in
+sandbox. Chase is HEALTHY in production and the config is correct (`redirect_uri`
+registered + accepted). **The only remaining step is entering your Chase login.**
 
-1. **Confirm production access** — Plaid Dashboard → *Overview*. You need an approved
-   Production application (not just Production keys). If it says "limited"/"pending",
-   complete the application (company info, use case, app display info).
-2. **Institution status** — Dashboard → *Institutions* / OAuth institutions. Check
-   Chase's status for your account; large banks (Chase = JPMorgan) require per-customer
-   enrollment and can take 1–2 days after the registration requirements are met.
-3. **Verify the pipeline meanwhile** — connect a *different* bank via the app's
-   "Connect Bank" button. If it syncs, the pipeline is 100% working and Chase is purely
-   an enrollment matter to raise with Plaid support.
-4. Redirect URI is already registered (`https://budget.grotketech.com`) and accepted.
+### How it works (all live)
+- **"Connect Bank"** → `POST /api/plaid/create-hosted-link` → redirects you to
+  Plaid's own secure page (`secure.plaid.com/hl/...`). No embedded JS, so no cache
+  or cross-device issues.
+- You connect Chase there → Plaid calls **`POST /api/plaid/webhook`** (public,
+  authenticated by a `?key=<PLAID_WEBHOOK_SECRET>` — Plaid doesn't support custom
+  webhook headers, and ES256/JWK verification isn't feasible in the JSVM, so this
+  URL secret + the `plaid_pending` mapping is the auth).
+- The webhook exchanges the token, stores the item (`plaid_items`), and syncs.
+- `TRANSACTIONS/SYNC_UPDATES_AVAILABLE` webhooks keep pulling data as Plaid
+  prepares your full history. All syncs dedupe by `plaidId` (no duplicates).
+- On return (`/?plaid=done`) the app polls `/api/plaid/sync` so transactions show.
 
-**Flip Plaid env** (already `production`): edit `PLAID_ENV` in
-`/opt/budget-tool/pocketbase.ecosystem.config.js` and
-`pm2 restart budget-tool-pocketbase --update-env` (or `pm2 delete` + `pm2 start` the
-ecosystem file, which is more reliable).
+### To connect
+1. Open **budget.grotketech.com** in an **incognito** window; log in.
+2. **Connect Bank** → pick **Chase** on Plaid's page → sign in → authorize.
+3. Transactions pull in automatically.
+
+### If Chase errors on Plaid's page
+That would be a Plaid/Chase **production-enrollment** matter (not our code):
+- Plaid Dashboard → confirm the Production application is fully **approved**.
+- Check Chase (`ins_56`) institution status for your account; JPMorgan requires
+  per-customer enrollment (can take 1–2 days after registration requirements).
+- Sanity check: connect a *different* bank — if it syncs, Chase is purely enrollment.
+- Read the authenticated webhook + `pm2 logs budget-tool-pocketbase` to see the
+  exact Plaid-side result.
+
+**Env** (`PLAID_ENV`, secrets) lives in `/opt/budget-tool/pocketbase.ecosystem.config.js`.
+Apply changes with `pm2 delete budget-tool-pocketbase && pm2 start …ecosystem.config.js`
+(more reliable than `--update-env`).
 
 ---
 
