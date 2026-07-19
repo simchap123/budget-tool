@@ -186,7 +186,7 @@ Backup the `pb_data` folder regularly!
 ```
 ┌─────────────────────────────┐
 │   Frontend (React + Vite)   │
-│   Port 3000 (production)    │
+│   static build on :3001 (prod) │
 │   Port 5173 (development)   │
 └──────────────┬──────────────┘
                │
