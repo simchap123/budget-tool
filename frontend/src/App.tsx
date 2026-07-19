@@ -10,6 +10,7 @@ import { Analytics } from './pages/Analytics'
 import { Recurring } from './pages/Recurring'
 import { Header } from './components/Header'
 import { ToastProvider } from './components/ui/Toast'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { initAnalytics, trackPageView } from './utils/analytics'
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <ToastProvider>
       <div className="min-h-screen bg-canvas">
         <Header
@@ -105,5 +107,6 @@ export default function App() {
       </main>
       </div>
     </ToastProvider>
+    </ErrorBoundary>
   )
 }
