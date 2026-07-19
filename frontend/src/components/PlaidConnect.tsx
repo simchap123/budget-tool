@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Landmark } from 'lucide-react'
 import { useToast } from './ui/Toast'
 
-// Load the Plaid Link script on demand (avoids a build dependency).
+const LINK_TOKEN_KEY = 'plaid_link_token'
+
+// Load the Plaid Link script on demand (must come from cdn.plaid.com).
 function loadPlaid(): Promise<any> {
   return new Promise((resolve, reject) => {
     const w = window as any
@@ -26,31 +28,63 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
     return { Authorization: `Bearer ${auth.token}` }
   }
 
+  const exchangeAndSync = async (publicToken: string, metadata: any) => {
+    try {
+      await axios.post(
+        `${apiUrl}/plaid/exchange-public-token`,
+        { public_token: publicToken, institution: metadata?.institution?.name || '' },
+        { headers: headers() }
+      )
+      toast.success('Bank connected — syncing…')
+      const res = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
+      toast.success(`Synced ${res.data.added} transactions`)
+      localStorage.removeItem(LINK_TOKEN_KEY)
+      onSynced()
+    } catch (e: any) {
+      toast.error('Sync failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // token: the link_token; receivedRedirectUri: set only when resuming an OAuth flow
+  const openLink = async (token: string, receivedRedirectUri?: string) => {
+    const Plaid = await loadPlaid()
+    const config: any = {
+      token,
+      onSuccess: (publicToken: string, metadata: any) => exchangeAndSync(publicToken, metadata),
+      onExit: (err: any) => {
+        setLoading(false)
+        if (err) toast.error('Plaid: ' + (err.display_message || err.error_message || 'exited'))
+      },
+    }
+    if (receivedRedirectUri) config.receivedRedirectUri = receivedRedirectUri
+    Plaid.create(config).open()
+  }
+
+  // On return from an OAuth institution, the bank redirects back to our
+  // redirect_uri with ?oauth_state_id=... — resume Link to finish the flow.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('oauth_state_id')) {
+      const token = localStorage.getItem(LINK_TOKEN_KEY)
+      if (token) {
+        const href = window.location.href
+        window.history.replaceState({}, '', window.location.pathname)
+        setLoading(true)
+        openLink(token, href)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const connect = async () => {
     setLoading(true)
     try {
       const { data } = await axios.post(`${apiUrl}/plaid/create-link-token`, {}, { headers: headers() })
-      const Plaid = await loadPlaid()
-      const handler = Plaid.create({
-        token: data.link_token,
-        onSuccess: async (public_token: string, metadata: any) => {
-          try {
-            await axios.post(
-              `${apiUrl}/plaid/exchange-public-token`,
-              { public_token, institution: metadata?.institution?.name || '' },
-              { headers: headers() }
-            )
-            toast.success('Bank connected — syncing…')
-            const res = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
-            toast.success(`Synced ${res.data.added} new transactions`)
-            onSynced()
-          } catch (e: any) {
-            toast.error('Sync failed: ' + (e.response?.data?.error || e.message))
-          }
-        },
-        onExit: () => setLoading(false),
-      })
-      handler.open()
+      // Persist across the OAuth redirect (browser leaves and returns).
+      localStorage.setItem(LINK_TOKEN_KEY, data.link_token)
+      await openLink(data.link_token)
     } catch (e: any) {
       toast.error('Could not start Plaid: ' + (e.response?.data?.error || e.message))
       setLoading(false)

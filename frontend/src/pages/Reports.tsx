@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Percent, ChevronLeft, ChevronRight } from 'lucide-react'
+import { monthRange } from '../utils/dateRange'
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -22,16 +23,12 @@ export function Reports() {
 
       let filter = ''
       if (filterType === 'month') {
-        const monthStart = `${currentMonth}-01`
-        const monthEnd = new Date(currentMonth + '-01')
-        monthEnd.setMonth(monthEnd.getMonth() + 1)
-        monthEnd.setDate(0)
-        const monthEndStr = monthEnd.toISOString().split('T')[0]
-        filter = `(date>='${monthStart}'&&date<='${monthEndStr}')`
+        const { start, endExclusive } = monthRange(currentMonth)
+        filter = `(date>='${start}'&&date<'${endExclusive}')`
       } else {
         const yearStart = `${currentYear}-01-01`
-        const yearEnd = `${currentYear}-12-31`
-        filter = `(date>='${yearStart}'&&date<='${yearEnd}')`
+        const yearEndExclusive = `${currentYear + 1}-01-01`
+        filter = `(date>='${yearStart}'&&date<'${yearEndExclusive}')`
       }
 
       const response = await axios.get(

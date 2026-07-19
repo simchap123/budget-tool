@@ -16,13 +16,17 @@ routerAdd("POST", "/api/plaid/create-link-token", (c) => {
   try {
     const { plaidCall } = require(`${__hooks}/plaid_lib.js`);
     const user = $apis.requestInfo(c).authRecord;
-    const data = plaidCall("/link/token/create", {
+    const payload = {
       user: { client_user_id: user.id },
       client_name: "Budget Tool",
       products: ["transactions"],
       country_codes: ["US"],
       language: "en",
-    });
+    };
+    // Required for OAuth institutions (Chase, etc.) in production.
+    const redirect = $os.getenv("PLAID_REDIRECT_URI");
+    if (redirect) payload.redirect_uri = redirect;
+    const data = plaidCall("/link/token/create", payload);
     return c.json(200, { link_token: data.link_token });
   } catch (err) {
     return c.json(400, { error: String((err && err.message) || err) });

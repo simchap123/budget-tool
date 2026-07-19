@@ -3,6 +3,7 @@ import axios from 'axios'
 import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
+import { monthRange } from '../utils/dateRange'
 
 interface Budget {
   id: string
@@ -40,12 +41,11 @@ export function Budget() {
       const year = currentDate.getFullYear()
       const month = currentDate.getMonth() + 1
 
-      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
-      const monthEnd = new Date(year, month, 0)
-      const monthEndStr = monthEnd.toISOString().split('T')[0]
+      const ym = `${year}-${String(month).padStart(2, '0')}`
+      const { start: monthStart, endExclusive } = monthRange(ym)
 
       const budgetFilter = encodeURIComponent(`(userId='${auth.record.id}'&&year=${year}&&month=${month})`)
-      const txnFilter = encodeURIComponent(`(date>='${monthStart}'&&date<='${monthEndStr}'&&type='expense')`)
+      const txnFilter = encodeURIComponent(`(date>='${monthStart}'&&date<'${endExclusive}'&&type='expense')`)
 
       const [budgetResponse, transactionResponse] = await Promise.all([
         axios.get(

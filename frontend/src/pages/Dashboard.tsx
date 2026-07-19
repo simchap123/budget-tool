@@ -9,6 +9,7 @@ import { Pagination } from '../components/ui/Pagination'
 import { SkeletonTable } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { trackTransactionAction } from '../utils/analytics'
+import { monthRange } from '../utils/dateRange'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -34,13 +35,8 @@ export function Dashboard({ user }: { user: any }) {
       const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
 
-      const monthStart = `${selectedMonth}-01`
-      const monthEnd = new Date(selectedMonth + '-01')
-      monthEnd.setMonth(monthEnd.getMonth() + 1)
-      monthEnd.setDate(0)
-      const monthEndStr = monthEnd.toISOString().split('T')[0]
-
-      const filter = `(date>='${monthStart}'&&date<='${monthEndStr}')`
+      const { start: monthStart, endExclusive } = monthRange(selectedMonth)
+      const filter = `(date>='${monthStart}'&&date<'${endExclusive}')`
 
       const response = await axios.get(
         `${apiUrl}/collections/transactions/records?perPage=25&page=${page}&filter=${encodeURIComponent(filter)}&sort=-date`,
