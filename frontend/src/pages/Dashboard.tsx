@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Pencil, Trash2 } from 'lucide-react'
 import { CSVImport } from '../components/CSVImport'
 import { PlaidConnect } from '../components/PlaidConnect'
+import { UpcomingBills } from '../components/UpcomingBills'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
@@ -229,6 +230,9 @@ export function Dashboard({ user }: { user: any }) {
           <p className="mt-2 text-3xl font-normal text-accent-breeze">${stats.net.toFixed(2)}</p>
         </div>
       </div>
+
+      {/* Upcoming recurring bills (renders only if any are due soon) */}
+      <UpcomingBills />
 
       {/* Add Transaction Form */}
       <div className="mt-12">

@@ -88,3 +88,21 @@ export function detectRecurring(txns: RawTxn[]): RecurringItem[] {
 
   return items.sort((a, b) => b.monthlyEstimate - a.monthlyEstimate)
 }
+
+// From detected recurring items, the ones whose next expected date falls within
+// the next `withinDays`, soonest first. Stale forecasts (next date already past)
+// are excluded.
+export function upcomingBills(
+  items: RecurringItem[],
+  todayYmd: string,
+  withinDays = 21
+): RecurringItem[] {
+  const today = new Date(todayYmd + 'T00:00:00Z').getTime()
+  const horizon = today + withinDays * DAY_MS
+  return items
+    .filter((i) => {
+      const next = new Date(i.nextDate + 'T00:00:00Z').getTime()
+      return next >= today && next <= horizon
+    })
+    .sort((a, b) => a.nextDate.localeCompare(b.nextDate))
+}

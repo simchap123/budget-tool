@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { merchantKey } from './merchant'
-import { detectRecurring, RawTxn } from './recurring'
+import { detectRecurring, upcomingBills, RawTxn, RecurringItem } from './recurring'
 
 describe('merchantKey', () => {
   it('extracts the merchant from noisy bank descriptions', () => {
@@ -83,6 +83,19 @@ describe('detectRecurring', () => {
       { description: 'PAYROLL DEP', amount: 2800, type: 'income', date: '2026-07-01' },
     ])
     expect(items).toHaveLength(0)
+  })
+
+  it('surfaces only bills due within the window, soonest first', () => {
+    const mk = (key: string, nextDate: string): RecurringItem => ({
+      key, label: key, count: 3, avgAmount: 50, lastDate: '2026-07-01',
+      avgIntervalDays: 30, nextDate, monthlyEstimate: 50,
+    })
+    const result = upcomingBills(
+      [mk('SOON', '2026-07-25'), mk('LATER', '2026-08-30'), mk('PAST', '2026-07-10'), mk('NEXT', '2026-07-22')],
+      '2026-07-19',
+      21
+    )
+    expect(result.map((i) => i.key)).toEqual(['NEXT', 'SOON']) // PAST excluded, LATER beyond window
   })
 
   it('sorts by monthly estimate descending', () => {
