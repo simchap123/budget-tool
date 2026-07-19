@@ -150,6 +150,26 @@ export function Dashboard({ user }: { user: any }) {
     setFormOpen(true)
   }
 
+  // Suggest a category from the user's history (trend memory) when they finish
+  // typing a description and haven't set a category yet.
+  const suggestCategory = async () => {
+    if (!formData.description.trim() || formData.category.trim()) return
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const { data } = await axios.post(
+        `${apiUrl}/ai/suggest-category`,
+        { description: formData.description },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      )
+      if (data.category) {
+        setFormData((f) => (f.category.trim() ? f : { ...f, category: data.category }))
+      }
+    } catch {
+      /* suggestion is best-effort */
+    }
+  }
+
   const calculateStats = () => {
     const income = transactions
       .filter((t: any) => t.type === 'income')
@@ -303,6 +323,7 @@ export function Dashboard({ user }: { user: any }) {
                     placeholder="e.g., Weekly shopping"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onBlur={suggestCategory}
                     className="input-base"
                     required
                   />

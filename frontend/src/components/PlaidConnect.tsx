@@ -75,7 +75,6 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
         openLink(token, href)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const connect = async () => {
