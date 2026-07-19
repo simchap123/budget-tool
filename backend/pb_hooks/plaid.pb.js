@@ -291,10 +291,13 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
     // Hosted Link completed: exchange public token(s), store item(s), sync.
     if (body.webhook_type === "LINK" && body.webhook_code === "SESSION_FINISHED" && body.status === "SUCCESS") {
       let userId = "";
+      let pendRec = null;
       try {
-        const pend = dao.findFirstRecordByFilter("plaid_pending", "linkToken = {:lt}", { lt: body.link_token });
-        userId = pend.get("userId");
+        pendRec = dao.findFirstRecordByFilter("plaid_pending", "linkToken = {:lt}", { lt: body.link_token });
+        userId = pendRec.get("userId");
       } catch (e) { /* unknown session */ }
+      // One-time mapping — remove it now the session is done (connect or reconnect).
+      if (pendRec) { try { dao.deleteRecord(pendRec); } catch (e) { /* ignore */ } }
       if (userId) {
         const itemsCol = dao.findCollectionByNameOrId("plaid_items");
         (body.public_tokens || []).forEach((pt) => {
