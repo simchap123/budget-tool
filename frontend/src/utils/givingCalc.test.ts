@@ -39,4 +39,19 @@ describe('computeGiving', () => {
   it('handles no matching category / empty input', () => {
     expect(computeGiving([], 10, 'Charity').months).toEqual([])
   })
+
+  it('restricts the tithe base to a specific income category when given', () => {
+    const mixed = [
+      { date: '2026-07-01 00:00:00.000Z', type: 'income', amount: 5000, category: 'Paychecks' },
+      { date: '2026-07-02 00:00:00.000Z', type: 'income', amount: 3000, category: 'Refund' }, // not tithable
+      { date: '2026-07-03 00:00:00.000Z', type: 'expense', amount: 500, category: 'Charity' },
+    ]
+    // All income: target = 10% of 8000 = 800
+    expect(computeGiving(mixed, 10, 'Charity').totalTarget).toBe(800)
+    // Paychecks only: target = 10% of 5000 = 500
+    const paychecksOnly = computeGiving(mixed, 10, 'Charity', 'Paychecks')
+    expect(paychecksOnly.totalIncome).toBe(5000)
+    expect(paychecksOnly.totalTarget).toBe(500)
+    expect(paychecksOnly.balance).toBe(0) // gave 500, target 500
+  })
 })

@@ -25,18 +25,27 @@ export interface GivingSummary {
 
 // Track giving as a percentage of income (e.g. a 10% tithe). For each month:
 // income = sum of income transactions, target = percent of income, given = sum of
-// EXPENSE transactions in the giving category. Category match is case-insensitive.
-// `balance` shows whether cumulative giving is ahead of or behind the target.
-export function computeGiving(txns: GivingTxn[], percent: number, category: string): GivingSummary {
+// EXPENSE transactions in the giving category. Category matches are case-insensitive.
+// `incomeCategory` optionally restricts the tithe base to one income category
+// (e.g. "Paychecks") — leave blank to tithe on all income. `balance` shows whether
+// cumulative giving is ahead of or behind the target.
+export function computeGiving(
+  txns: GivingTxn[],
+  percent: number,
+  category: string,
+  incomeCategory = ''
+): GivingSummary {
   const cat = String(category || '').trim().toLowerCase()
+  const incCat = String(incomeCategory || '').trim().toLowerCase()
   const byMonth: Record<string, { income: number; given: number }> = {}
 
   for (const t of txns) {
     const month = String(t.date || '').slice(0, 7)
     if (month.length < 7) continue
     if (!byMonth[month]) byMonth[month] = { income: 0, given: 0 }
-    if (t.type === 'income') byMonth[month].income += txAmount(t)
-    else if (cat && t.type === 'expense' && String(t.category || '').toLowerCase() === cat) {
+    if (t.type === 'income' && (!incCat || String(t.category || '').toLowerCase() === incCat)) {
+      byMonth[month].income += txAmount(t)
+    } else if (cat && t.type === 'expense' && String(t.category || '').toLowerCase() === cat) {
       byMonth[month].given += txAmount(t)
     }
   }

@@ -14,6 +14,7 @@ export function Giving() {
   const [configId, setConfigId] = useState<string | null>(null)
   const [percent, setPercent] = useState('10')
   const [category, setCategory] = useState('')
+  const [incomeCategory, setIncomeCategory] = useState('')
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const auth = () => JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -38,6 +39,7 @@ export function Giving() {
         setConfigId(cfg.id)
         setPercent(String(cfg.percent ?? 10))
         setCategory(cfg.category || '')
+        setIncomeCategory(cfg.incomeCategory || '')
       }
       setTxns(txRes.data.items || [])
     } catch (e) {
@@ -55,7 +57,7 @@ export function Giving() {
     if (!category.trim()) return toast.error('Pick which category counts as giving')
     setSaving(true)
     try {
-      const body = { userId: auth().record.id, percent: pct, category: category.trim() }
+      const body = { userId: auth().record.id, percent: pct, category: category.trim(), incomeCategory: incomeCategory.trim() }
       if (configId) {
         await axios.patch(`${apiUrl}/collections/giving/records/${configId}`, body, { headers: headers() })
       } else {
@@ -73,8 +75,11 @@ export function Giving() {
   const categories = Array.from(
     new Set(txns.filter((t) => t.type === 'expense').map((t) => t.category).filter(Boolean))
   ).sort()
+  const incomeCategories = Array.from(
+    new Set(txns.filter((t) => t.type === 'income').map((t) => t.category).filter(Boolean))
+  ).sort()
 
-  const summary: GivingSummary = computeGiving(txns, parseFloat(percent) || 0, category)
+  const summary: GivingSummary = computeGiving(txns, parseFloat(percent) || 0, category, incomeCategory)
   const thisMonth = new Date().toISOString().slice(0, 7)
   const current = summary.months.find((m) => m.month === thisMonth) || { month: thisMonth, income: 0, target: 0, given: 0, remaining: 0 }
 
@@ -126,10 +131,26 @@ export function Giving() {
               {categories.map((c) => <option key={c} value={c} />)}
             </datalist>
           </div>
+          <div className="min-w-[12rem]">
+            <label className="block text-body-sm text-ink-400 mb-1">Tithe on income from</label>
+            <input
+              list="income-cats" value={incomeCategory}
+              onChange={(e) => setIncomeCategory(e.target.value)}
+              placeholder="All income"
+              aria-label="Income source category"
+              className="input-base w-full"
+            />
+            <datalist id="income-cats">
+              {incomeCategories.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
           <button type="submit" disabled={saving} className="btn-primary py-2 px-4 disabled:opacity-50">
             {saving ? 'Saving…' : 'Save goal'}
           </button>
         </div>
+        <p className="mt-2 text-body-sm text-ink-500">
+          Leave "income from" blank to tithe on all income, or pick a category (e.g. Paychecks) to tithe only on that.
+        </p>
         {!category && (
           <p className="mt-3 text-body-sm text-ink-500">
             Tip: create a "Charity" or "Tithe" category and tag your giving transactions with it — they'll count here automatically.
