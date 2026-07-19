@@ -306,11 +306,11 @@ export function Budget() {
 
       {/* Month Navigator */}
       <div className="mt-6 flex items-center justify-center gap-4">
-        <button onClick={handlePrevMonth} className="p-2 hover:bg-ink-700 rounded transition-colors">
+        <button onClick={handlePrevMonth} aria-label="Previous month" className="p-2 hover:bg-ink-700 rounded transition-colors">
           <ChevronLeft size={20} />
         </button>
         <span className="text-lg font-normal min-w-[200px] text-center">{monthYear}</span>
-        <button onClick={handleNextMonth} className="p-2 hover:bg-ink-700 rounded transition-colors">
+        <button onClick={handleNextMonth} aria-label="Next month" className="p-2 hover:bg-ink-700 rounded transition-colors">
           <ChevronRight size={20} />
         </button>
       </div>

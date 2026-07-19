@@ -43,6 +43,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
           <h2 className="text-lg font-normal text-ink-50">{title}</h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="text-ink-400 hover:text-ink-200 transition-colors"
           >
             <X size={20} />

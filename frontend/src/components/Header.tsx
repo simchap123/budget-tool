@@ -122,6 +122,8 @@ export function Header({
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
             className="md:hidden text-ink-400 hover:text-ink-200 transition-colors"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}

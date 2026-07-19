@@ -207,6 +207,7 @@ export function Categories() {
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEditCategory(cat)}
+                    aria-label={`Edit ${cat.name}`}
                     className="p-1 hover:bg-ink-700 rounded transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,6 +216,7 @@ export function Categories() {
                   </button>
                   <button
                     onClick={() => setDeleteId(cat.id)}
+                    aria-label={`Delete ${cat.name}`}
                     className="p-1 hover:bg-red-500/20 rounded transition-colors text-red-400"
                   >
                     <Trash2 size={16} />

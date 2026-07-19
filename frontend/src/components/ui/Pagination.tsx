@@ -45,6 +45,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
       <button
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
+        aria-label="Previous page"
         className="p-2 text-ink-400 hover:text-ink-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronLeft size={20} />
@@ -72,6 +73,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
       <button
         onClick={() => onPageChange(Math.min(totalPages, page + 1))}
         disabled={page === totalPages}
+        aria-label="Next page"
         className="p-2 text-ink-400 hover:text-ink-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronRight size={20} />

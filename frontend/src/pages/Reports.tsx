@@ -201,13 +201,13 @@ export function Reports() {
 
         {filterType === 'month' && (
           <div className="flex items-center gap-2">
-            <button onClick={handlePrevMonth} className="p-1 hover:bg-ink-700 rounded transition-colors">
+            <button onClick={handlePrevMonth} aria-label="Previous month" className="p-1 hover:bg-ink-700 rounded transition-colors">
               <ChevronLeft size={20} />
             </button>
             <span className="text-body-md min-w-[150px] text-center">
               {monthLabel(currentMonth)}
             </span>
-            <button onClick={handleNextMonth} className="p-1 hover:bg-ink-700 rounded transition-colors">
+            <button onClick={handleNextMonth} aria-label="Next month" className="p-1 hover:bg-ink-700 rounded transition-colors">
               <ChevronRight size={20} />
             </button>
           </div>
@@ -217,6 +217,7 @@ export function Reports() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentYear(currentYear - 1)}
+              aria-label="Previous year"
               className="p-1 hover:bg-ink-700 rounded transition-colors"
             >
               <ChevronLeft size={20} />
@@ -224,6 +225,7 @@ export function Reports() {
             <span className="text-body-md min-w-[100px] text-center">{currentYear}</span>
             <button
               onClick={() => setCurrentYear(currentYear + 1)}
+              aria-label="Next year"
               className="p-1 hover:bg-ink-700 rounded transition-colors"
             >
               <ChevronRight size={20} />
