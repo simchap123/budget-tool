@@ -99,9 +99,15 @@ routerAdd("POST", "/api/plaid/sync", (c) => {
             }
           });
           (page.modified || []).forEach((t) => {
-            const rec = findByPlaidId(t.transaction_id) || new Record(txCollection);
+            const existing = findByPlaidId(t.transaction_id);
+            const rec = existing || new Record(txCollection);
             const m = mapTxn(t, user.id);
-            for (const k in m) rec.set(k, m[k]);
+            for (const k in m) {
+              // Keep the user's own category on a transaction they've already
+              // seen — Plaid owns the money fields, the user owns categorization.
+              if (existing && k === "category") continue;
+              rec.set(k, m[k]);
+            }
             dao.saveRecord(rec);
             modified++;
           });
@@ -280,9 +286,14 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
           if (!findByPlaidId(t.transaction_id)) dao.saveRecord(new Record(txCol, mapTxn(t, userId)));
         });
         (page.modified || []).forEach((t) => {
-          const r = findByPlaidId(t.transaction_id) || new Record(txCol);
+          const existing = findByPlaidId(t.transaction_id);
+          const r = existing || new Record(txCol);
           const m = mapTxn(t, userId);
-          for (const k in m) r.set(k, m[k]);
+          for (const k in m) {
+            // Preserve the user's category on a transaction they've already seen.
+            if (existing && k === "category") continue;
+            r.set(k, m[k]);
+          }
           dao.saveRecord(r);
         });
         (page.removed || []).forEach((rm) => {
