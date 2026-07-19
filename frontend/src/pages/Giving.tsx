@@ -1,0 +1,205 @@
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import { HandHeart } from 'lucide-react'
+import { useToast } from '../components/ui/Toast'
+import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
+import { computeGiving, GivingSummary } from '../utils/givingCalc'
+import { monthLabel } from '../utils/dateRange'
+
+export function Giving() {
+  const toast = useToast()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [txns, setTxns] = useState<any[]>([])
+  const [configId, setConfigId] = useState<string | null>(null)
+  const [percent, setPercent] = useState('10')
+  const [category, setCategory] = useState('')
+
+  const apiUrl = import.meta.env.VITE_API_URL || '/api'
+  const auth = () => JSON.parse(localStorage.getItem('pb_auth') || '{}')
+  const headers = () => ({ Authorization: `Bearer ${auth().token}` })
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      const uid = auth().record?.id
+      const [cfgRes, txRes] = await Promise.all([
+        axios
+          .get(`${apiUrl}/collections/giving/records?filter=${encodeURIComponent(`(userId='${uid}')`)}`, { headers: headers() })
+          .catch(() => ({ data: { items: [] } })),
+        axios.get(`${apiUrl}/collections/transactions/records?perPage=500&sort=-date`, { headers: headers() }),
+      ])
+      const cfg = (cfgRes.data.items || [])[0]
+      if (cfg) {
+        setConfigId(cfg.id)
+        setPercent(String(cfg.percent ?? 10))
+        setCategory(cfg.category || '')
+      }
+      setTxns(txRes.data.items || [])
+    } catch (e) {
+      console.error('Error loading giving:', e)
+      toast.error('Failed to load giving data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveConfig = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const pct = parseFloat(percent)
+    if (!(pct > 0)) return toast.error('Enter a percentage greater than 0')
+    if (!category.trim()) return toast.error('Pick which category counts as giving')
+    setSaving(true)
+    try {
+      const body = { userId: auth().record.id, percent: pct, category: category.trim() }
+      if (configId) {
+        await axios.patch(`${apiUrl}/collections/giving/records/${configId}`, body, { headers: headers() })
+      } else {
+        const r = await axios.post(`${apiUrl}/collections/giving/records`, body, { headers: headers() })
+        setConfigId(r.data.id)
+      }
+      toast.success('Giving goal saved')
+    } catch (err: any) {
+      toast.error('Failed to save: ' + (err.response?.data?.message || err.message))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const categories = Array.from(
+    new Set(txns.filter((t) => t.type === 'expense').map((t) => t.category).filter(Boolean))
+  ).sort()
+
+  const summary: GivingSummary = computeGiving(txns, parseFloat(percent) || 0, category)
+  const thisMonth = new Date().toISOString().slice(0, 7)
+  const current = summary.months.find((m) => m.month === thisMonth) || { month: thisMonth, income: 0, target: 0, given: 0, remaining: 0 }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg text-ink-400">Loading giving…</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-full bg-accent-twilight/15 text-accent-twilight">
+          <HandHeart size={22} />
+        </div>
+        <div>
+          <h1 className="text-display-lg">Giving</h1>
+          <p className="mt-1 text-ink-400">Track a percentage of your income toward giving (tithe, charity, etc.)</p>
+        </div>
+      </div>
+
+      {/* Config */}
+      <form onSubmit={saveConfig} className="mt-8 card p-6">
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-body-sm text-ink-400 mb-1">Give this % of income</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number" step="0.5" min="0" value={percent}
+                onChange={(e) => setPercent(e.target.value)}
+                aria-label="Giving percentage"
+                className="input-base w-24"
+              />
+              <span className="text-ink-300">%</span>
+            </div>
+          </div>
+          <div className="min-w-[12rem]">
+            <label className="block text-body-sm text-ink-400 mb-1">Giving category</label>
+            <input
+              list="giving-cats" value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="e.g. Charity or Tithe"
+              aria-label="Giving category"
+              className="input-base w-full"
+            />
+            <datalist id="giving-cats">
+              {categories.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+          <button type="submit" disabled={saving} className="btn-primary py-2 px-4 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save goal'}
+          </button>
+        </div>
+        {!category && (
+          <p className="mt-3 text-body-sm text-ink-500">
+            Tip: create a "Charity" or "Tithe" category and tag your giving transactions with it — they'll count here automatically.
+          </p>
+        )}
+      </form>
+
+      {/* This month */}
+      <div className="mt-8 card p-6">
+        <h3 className="text-body-sm text-ink-400">{monthLabel(thisMonth)} · giving goal</h3>
+        <div className="mt-3">
+          <BudgetProgressBar spent={current.given} budgeted={current.target} color="#8b7fd6" />
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p className="text-body-sm text-ink-500">Income</p>
+            <p className="text-lg text-ink-100">${current.income.toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="text-body-sm text-ink-500">Target ({percent || 0}%)</p>
+            <p className="text-lg text-accent-twilight">${current.target.toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="text-body-sm text-ink-500">Given</p>
+            <p className="text-lg text-accent-sunset">${current.given.toFixed(2)}</p>
+          </div>
+        </div>
+        <p className="mt-3 text-center text-body-sm">
+          {current.remaining > 0
+            ? <span className="text-ink-300">${current.remaining.toFixed(2)} left to give this month</span>
+            : <span className="text-accent-breeze">Goal met — ${Math.abs(current.remaining).toFixed(2)} over 🎉</span>}
+        </p>
+      </div>
+
+      {/* Cumulative */}
+      <div className="mt-6 card p-6">
+        <h3 className="text-body-sm text-ink-400">All-time</h3>
+        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div><p className="text-body-sm text-ink-500">Total given</p><p className="text-2xl text-accent-sunset">${summary.totalGiven.toFixed(2)}</p></div>
+          <div><p className="text-body-sm text-ink-500">Total target</p><p className="text-2xl text-accent-twilight">${summary.totalTarget.toFixed(2)}</p></div>
+          <div>
+            <p className="text-body-sm text-ink-500">{summary.balance >= 0 ? 'Ahead by' : 'Behind by'}</p>
+            <p className={`text-2xl ${summary.balance >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>${Math.abs(summary.balance).toFixed(2)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly breakdown */}
+      {summary.months.length > 0 && (
+        <div className="mt-6 card p-4 overflow-x-auto">
+          <table className="w-full text-body-sm">
+            <thead><tr className="text-ink-500 text-left">
+              <th className="py-2">Month</th><th className="text-right">Income</th><th className="text-right">Target</th><th className="text-right">Given</th><th className="text-right">+/-</th>
+            </tr></thead>
+            <tbody>
+              {summary.months.slice().reverse().map((m) => (
+                <tr key={m.month} className="border-t border-canvas-soft">
+                  <td className="py-2 text-ink-200">{monthLabel(m.month)}</td>
+                  <td className="text-right text-ink-300">${m.income.toFixed(0)}</td>
+                  <td className="text-right text-accent-twilight">${m.target.toFixed(0)}</td>
+                  <td className="text-right text-accent-sunset">${m.given.toFixed(0)}</td>
+                  <td className={`text-right ${m.remaining <= 0 ? 'text-accent-breeze' : 'text-ink-400'}`}>
+                    {m.remaining <= 0 ? '+' : '-'}${Math.abs(m.remaining).toFixed(0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}

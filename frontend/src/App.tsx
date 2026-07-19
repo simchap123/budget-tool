@@ -8,6 +8,7 @@ import { Budget } from './pages/Budget'
 import { Categories } from './pages/Categories'
 import { Analytics } from './pages/Analytics'
 import { Recurring } from './pages/Recurring'
+import { Giving } from './pages/Giving'
 import { Header } from './components/Header'
 import { ToastProvider } from './components/ui/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -100,6 +101,9 @@ export default function App() {
         )}
         {currentPage === 'recurring' && user && (
           <Recurring />
+        )}
+        {currentPage === 'giving' && user && (
+          <Giving />
         )}
         {currentPage === 'dashboard' && !user && (
           <Home onNavigate={setCurrentPage} />
