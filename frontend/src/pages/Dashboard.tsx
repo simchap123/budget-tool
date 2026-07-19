@@ -148,7 +148,9 @@ export function Dashboard({ user }: { user: any }) {
       description: txn.description,
       type: txn.type,
       category: txn.category || 'Uncategorized',
-      date: txn.date || new Date().toISOString().split('T')[0],
+      // Stored dates look like "2026-07-16 00:00:00.000Z"; a <input type="date">
+      // needs "YYYY-MM-DD", so take the first 10 chars (else the field goes blank).
+      date: txn.date ? String(txn.date).slice(0, 10) : new Date().toISOString().split('T')[0],
     })
     setFormOpen(true)
   }
