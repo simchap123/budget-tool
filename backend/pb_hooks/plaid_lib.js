@@ -26,9 +26,11 @@ function plaidCall(path, payload) {
   });
   const data = res.json;
   if (res.statusCode >= 400) {
-    throw new Error(
+    const err = new Error(
       "Plaid error: " + ((data && (data.error_message || data.error_code)) || res.statusCode)
     );
+    err.plaidCode = data && data.error_code;
+    throw err;
   }
   return data;
 }
