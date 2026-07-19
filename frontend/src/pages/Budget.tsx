@@ -49,12 +49,14 @@ export function Budget() {
       const ym = `${year}-${String(month).padStart(2, '0')}`
       const { start: monthStart, endExclusive } = monthRange(ym)
 
-      const budgetFilter = encodeURIComponent(`(userId='${auth.record.id}'&&year=${year}&&month=${month})`)
+      // Budgets carry forward: one per category, applied to EVERY month (not
+      // tied to the month they were created in). Only "spent" is month-specific.
+      const budgetFilter = encodeURIComponent(`(userId='${auth.record.id}')`)
       const txnFilter = encodeURIComponent(`(date>='${monthStart}'&&date<'${endExclusive}'&&type='expense')`)
 
       const [budgetResponse, transactionResponse] = await Promise.all([
         axios.get(
-          `${apiUrl}/collections/budgets/records?filter=${budgetFilter}`,
+          `${apiUrl}/collections/budgets/records?filter=${budgetFilter}&perPage=500`,
           { headers: { Authorization: `Bearer ${auth.token}` } }
         ).catch(() => ({ data: { items: [] } })),
         axios.get(
@@ -70,7 +72,14 @@ export function Budget() {
         categorySpent[key] = (categorySpent[key] || 0) + txAmount(txn)
       })
 
-      setBudgets((budgetResponse.data.items || []).map((b: any) => ({
+      // Dedup by category (keep the most recent) in case old per-month rows exist.
+      const byCategory: { [key: string]: any } = {}
+      ;(budgetResponse.data.items || []).forEach((b: any) => {
+        const key = (b.category || 'Uncategorized').toLowerCase()
+        const prev = byCategory[key]
+        if (!prev || String(b.created || '') > String(prev.created || '')) byCategory[key] = b
+      })
+      setBudgets(Object.values(byCategory).map((b: any) => ({
         ...b,
         categoryName: b.category || 'Uncategorized',
       })))
@@ -129,20 +138,26 @@ export function Budget() {
       const year = currentDate.getFullYear()
       const month = currentDate.getMonth() + 1
 
-      if (editingId) {
+      const cat = formData.category.trim()
+      // Upsert by category so one category never gets duplicate budgets.
+      const existing = editingId
+        ? budgets.find((b) => b.id === editingId)
+        : budgets.find((b) => b.categoryName.toLowerCase() === cat.toLowerCase())
+
+      if (existing) {
         await axios.patch(
-          `${apiUrl}/collections/budgets/records/${editingId}`,
-          { category: formData.category.trim(), budgetAmount: amount },
+          `${apiUrl}/collections/budgets/records/${existing.id}`,
+          { category: cat, budgetAmount: amount },
           { headers: { Authorization: `Bearer ${auth.token}` } }
         )
         toast.success('Budget updated')
       } else {
         await axios.post(
           `${apiUrl}/collections/budgets/records`,
-          { category: formData.category.trim(), budgetAmount: amount, year, month, userId: auth.record.id },
+          { category: cat, budgetAmount: amount, year, month, userId: auth.record.id },
           { headers: { Authorization: `Bearer ${auth.token}` } }
         )
-        toast.success('Budget set')
+        toast.success('Budget set — it now applies every month')
       }
 
       setFormData({ category: '', budgetAmount: '' })
@@ -239,7 +254,12 @@ export function Budget() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-display-lg">Budget</h1>
-          <p className="mt-2 text-ink-400">Zero-based budgeting for {monthYear}</p>
+          <p className="mt-2 text-ink-400">
+            Zero-based budgeting · showing spend for {monthYear}
+          </p>
+          <p className="mt-1 text-body-sm text-ink-500">
+            Budgets carry forward every month — set them once.
+          </p>
         </div>
         <div className="flex gap-2 shrink-0">
           <button
