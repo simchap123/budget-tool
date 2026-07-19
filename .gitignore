@@ -53,3 +53,6 @@ build/
 
 # Playwright MCP run artifacts
 .playwright-mcp/
+
+# harness artifact
+frontend/.claude/
