@@ -2,7 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import { trackImport } from '../utils/analytics'
 import { parseCSVLine } from '../utils/csv'
-import { csvRowToTransaction } from '../utils/csvImport'
+import { csvRowToTransaction, hasSignedAmounts } from '../utils/csvImport'
 
 // Retry POSTs that hit API rate limiting (429/503) with linear backoff, so a
 // large import (e.g. 1,500-row Chase export) doesn't silently drop rows.
@@ -73,14 +73,18 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
       const csv = await file.text()
       const rows = csv.split('\n').filter(row => row.trim())
       const headers = parseCSVLine(rows[0]).map(h => h.trim())
+      const parsedRows = rows.slice(1).map(r => parseCSVLine(r).map(v => v.trim()))
+      // If the file has any negative amount (a Chase-style signed export), let the
+      // sign decide income vs expense instead of defaulting everything to expense.
+      const signed = hasSignedAmounts(headers, parsedRows)
 
       let imported = 0
       let failed = 0
 
-      for (let i = 1; i < rows.length; i++) {
+      for (let i = 0; i < parsedRows.length; i++) {
         try {
-          const values = parseCSVLine(rows[i]).map(v => v.trim())
-          const txn = csvRowToTransaction(headers, values, auth.record.id)
+          const values = parsedRows[i]
+          const txn = csvRowToTransaction(headers, values, auth.record.id, signed)
           if (!txn) {
             failed++
             continue

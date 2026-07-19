@@ -47,3 +47,52 @@ describe('csvRowToTransaction', () => {
     expect(csvRowToTransaction(H, ['07/17/2026', 'Store', '9', '', '', ''], 'u')!.date).toBe('2026-07-17 00:00:00.000Z')
   })
 })
+
+import { hasSignedAmounts, amountColumnIndex } from './csvImport'
+
+describe('csvRowToTransaction — real Chase formats', () => {
+  // Chase credit-card export
+  const CC = ['Transaction Date', 'Post Date', 'Description', 'Category', 'Type', 'Amount', 'Memo']
+
+  it('reads Chase "Transaction Date" and a signed purchase (negative = expense)', () => {
+    const t = csvRowToTransaction(CC, ['07/15/2026', '07/16/2026', 'AMAZON', 'Shopping', 'Sale', '-52.30', ''], 'u', true)!
+    expect(t).toMatchObject({ type: 'expense', amount: 52.3, category: 'Shopping', date: '2026-07-15 00:00:00.000Z', description: 'AMAZON' })
+  })
+
+  it('treats a positive amount in a signed file as income (e.g. a card payment)', () => {
+    const t = csvRowToTransaction(CC, ['07/20/2026', '07/20/2026', 'Payment Thank You', '', 'Payment', '500.00', ''], 'u', true)!
+    expect(t).toMatchObject({ type: 'income', amount: 500 })
+  })
+
+  it('strips $ and commas from amounts', () => {
+    const t = csvRowToTransaction(CC, ['07/01/2026', '', 'Rent', '', 'Sale', '-$1,250.00', ''], 'u', true)!
+    expect(t.amount).toBe(1250)
+    expect(t.type).toBe('expense')
+  })
+
+  it('handles Chase checking via Posting Date + sign, ignoring odd type text', () => {
+    const CHK = ['Details', 'Posting Date', 'Description', 'Amount', 'Type', 'Balance']
+    const t = csvRowToTransaction(CHK, ['DEBIT', '07/15/2026', 'SHELL OIL', '-45.00', 'ACH_DEBIT', '1000'], 'u', true)!
+    expect(t).toMatchObject({ type: 'expense', amount: 45, description: 'SHELL OIL', date: '2026-07-15 00:00:00.000Z' })
+  })
+
+  it('handles separate Debit/Credit columns', () => {
+    const BANK = ['Date', 'Description', 'Debit', 'Credit']
+    expect(csvRowToTransaction(BANK, ['07/01/2026', 'Groceries', '80.00', ''], 'u')!).toMatchObject({ type: 'expense', amount: 80 })
+    expect(csvRowToTransaction(BANK, ['07/02/2026', 'Deposit', '', '1200'], 'u')!).toMatchObject({ type: 'income', amount: 1200 })
+  })
+})
+
+describe('hasSignedAmounts', () => {
+  const H = ['Date', 'Description', 'Amount']
+  it('detects a signed (Chase-style) file', () => {
+    expect(hasSignedAmounts(H, [['07/01/2026', 'A', '-5'], ['07/02/2026', 'B', '10']])).toBe(true)
+  })
+  it('returns false for an all-positive file', () => {
+    expect(hasSignedAmounts(H, [['07/01/2026', 'A', '5'], ['07/02/2026', 'B', '10']])).toBe(false)
+  })
+  it('finds the amount column index', () => {
+    expect(amountColumnIndex(['Date', 'Amount', 'Type'])).toBe(1)
+    expect(amountColumnIndex(['Date', 'Desc'])).toBe(-1)
+  })
+})
