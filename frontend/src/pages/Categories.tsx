@@ -40,6 +40,7 @@ export function Categories() {
       setCategories(response.data.items || [])
     } catch (err) {
       console.error('Error fetching categories:', err)
+      toast.error('Failed to load categories')
     } finally {
       setLoading(false)
     }
