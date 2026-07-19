@@ -35,6 +35,12 @@ export function Recurring() {
 
   const monthlyTotal = items.reduce((s, i) => s + i.monthlyEstimate, 0)
 
+  // Timezone-safe short date ("Aug 14") from a YYYY-MM-DD string.
+  const fmt = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -76,7 +82,8 @@ export function Recurring() {
                   <div className="min-w-0">
                     <p className="font-normal text-ink-50 truncate">{item.label}</p>
                     <p className="mt-1 text-body-sm text-ink-400">
-                      {item.count}× · last {new Date(item.lastDate).toLocaleDateString()}
+                      {item.count}× · every ~{item.avgIntervalDays}d ·{' '}
+                      <span className="text-accent-breeze">next ~{fmt(item.nextDate)}</span>
                     </p>
                   </div>
                 </div>

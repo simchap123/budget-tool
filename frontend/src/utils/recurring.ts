@@ -13,7 +13,23 @@ export interface RecurringItem {
   count: number
   avgAmount: number
   lastDate: string
+  avgIntervalDays: number
+  nextDate: string
   monthlyEstimate: number
+}
+
+const DAY_MS = 86400000
+
+// Average days between consecutive (sorted) dates.
+function avgInterval(sortedDates: string[]): number {
+  if (sortedDates.length < 2) return 30
+  let total = 0
+  for (let i = 1; i < sortedDates.length; i++) {
+    const a = new Date(sortedDates[i - 1] + 'T00:00:00Z').getTime()
+    const b = new Date(sortedDates[i] + 'T00:00:00Z').getTime()
+    total += (b - a) / DAY_MS
+  }
+  return total / (sortedDates.length - 1)
 }
 
 // Detect recurring expenses (subscriptions / bills): same merchant, consistent
@@ -44,13 +60,24 @@ export function detectRecurring(txns: RawTxn[]): RecurringItem[] {
     if (min <= 0 || max / min > 1.6) continue // amounts must be consistent
 
     const avg = g.amounts.reduce((a, b) => a + b, 0) / g.amounts.length
+    const sortedDates = g.dates.slice().sort()
+    const lastDate = sortedDates[sortedDates.length - 1]
+    const interval = avgInterval(sortedDates)
+    const nextDate = new Date(new Date(lastDate + 'T00:00:00Z').getTime() + interval * DAY_MS)
+      .toISOString()
+      .slice(0, 10)
+    // Cadence-aware monthly cost (weekly charges cost ~4x their amount / month).
+    const monthlyEstimate = avg * (30 / Math.max(interval, 1))
+
     items.push({
       key,
       label: g.sample.trim().replace(/\s+/g, ' ').slice(0, 44),
       count: g.amounts.length,
       avgAmount: avg,
-      lastDate: g.dates.slice().sort().slice(-1)[0],
-      monthlyEstimate: avg,
+      lastDate,
+      avgIntervalDays: Math.round(interval),
+      nextDate,
+      monthlyEstimate,
     })
   }
 

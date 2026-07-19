@@ -27,6 +27,25 @@ describe('detectRecurring', () => {
     expect(items[0].key).toBe('OPTIMUM')
     expect(items[0].count).toBe(3)
     expect(items[0].avgAmount).toBeCloseTo(157.11)
+    // ~monthly cadence, next bill forecast about a month after the last
+    expect(items[0].avgIntervalDays).toBeGreaterThanOrEqual(29)
+    expect(items[0].avgIntervalDays).toBeLessThanOrEqual(32)
+    expect(items[0].nextDate.startsWith('2026-08')).toBe(true)
+    // cadence-aware estimate is ~the charge for a monthly bill (within a few %)
+    expect(items[0].monthlyEstimate).toBeGreaterThan(150)
+    expect(items[0].monthlyEstimate).toBeLessThan(162)
+  })
+
+  it('scales the monthly estimate for weekly cadence', () => {
+    const items = detectRecurring([
+      t('NETFLIX SUB', 10, '2026-07-01'),
+      t('NETFLIX SUB', 10, '2026-07-08'),
+      t('NETFLIX SUB', 10, '2026-07-15'),
+      t('NETFLIX SUB', 10, '2026-08-01'),
+    ])
+    // ~weekly (7-day) interval -> roughly 4x the charge per month
+    expect(items[0].avgIntervalDays).toBeLessThanOrEqual(11)
+    expect(items[0].monthlyEstimate).toBeGreaterThan(25)
   })
 
   it('excludes variable spend at the same merchant (not consistent amounts)', () => {
