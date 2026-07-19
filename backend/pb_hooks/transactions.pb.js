@@ -42,6 +42,45 @@ routerAdd("POST", "/api/rpc/bulk-recategorize", (c) => {
   }
 }, $apis.requireRecordAuth());
 
+// POST /api/rpc/recategorize-similar  { description, category, apply }
+//   -> { key, count, updated }
+// Find every transaction from the SAME merchant as `description` (matched on the
+// normalized merchant key, so different dates / transaction codes still group)
+// and, when apply is true, move them all to `category`. With apply omitted it
+// just previews the count so the UI can confirm before touching anything.
+routerAdd("POST", "/api/rpc/recategorize-similar", (c) => {
+  try {
+    const info = $apis.requestInfo(c);
+    const user = info.authRecord;
+    const description = String((info.data && info.data.description) || "");
+    const category = String((info.data && info.data.category) || "").trim();
+    const apply = !!(info.data && info.data.apply);
+    if (!description || !category) throw new Error("description and category are required");
+
+    const { merchantKey } = require(`${__hooks}/categorize_lib.js`);
+    const key = merchantKey(description);
+    if (!key) throw new Error("could not derive a merchant key");
+
+    const dao = $app.dao();
+    const records = dao.findRecordsByFilter(
+      "transactions", "userId = {:u}", "-created", 100000, 0, { u: user.id }
+    );
+    let count = 0, updated = 0;
+    records.forEach((r) => {
+      if (merchantKey(String(r.get("description") || "")) !== key) return;
+      count++;
+      if (apply && r.get("category") !== category) {
+        r.set("category", category);
+        dao.saveRecord(r);
+        updated++;
+      }
+    });
+    return c.json(200, { key: key, count: count, updated: updated });
+  } catch (err) {
+    return c.json(400, { error: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());
+
 // Auto-categorize on create. When a transaction is added (manual entry or CSV
 // import) with no real category, apply the CSV-derived rule table so new
 // activity lands in the right bucket the same way existing history was labeled.

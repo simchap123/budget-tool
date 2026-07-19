@@ -94,21 +94,29 @@ export function Dashboard({ user }: { user: any }) {
         )
         trackTransactionAction('edit', formData.type)
 
-        // Category propagation: if the user changed the category, apply the same
-        // category to every other transaction with the identical description
-        // (e.g. all "POS DEBIT GLAUBERS BAKERY" rows follow one edit).
+        // Category propagation: if the user changed the category, offer to apply
+        // it to every other transaction from the SAME merchant. We match on the
+        // normalized merchant key (not the exact description) so the same store
+        // on different dates — with different date/transaction-code suffixes —
+        // still groups together. Confirm first, since a mixed merchant like
+        // Amazon can legitimately span many categories.
         const newCat = formData.category || 'Uncategorized'
         const desc = formData.description || ''
         if (editingOriginal && editingOriginal.category !== newCat && desc.trim()) {
           try {
-            const res = await axios.post(
-              `${apiUrl}/rpc/bulk-recategorize`,
-              { term: desc, category: newCat, exact: true },
+            const preview = await axios.post(
+              `${apiUrl}/rpc/recategorize-similar`,
+              { description: desc, category: newCat },
               { headers: { Authorization: `Bearer ${auth.token}` } }
             )
-            const also = (res.data?.updated || 0) - 1 // exclude the row just edited
-            if (also > 0) {
-              toast.success(`Also set "${newCat}" on ${also} matching transaction${also === 1 ? '' : 's'}`)
+            const others = (preview.data?.count || 0) - 1 // exclude the row just edited
+            if (others > 0 && window.confirm(`Also change the other ${others} "${preview.data.key}" transaction${others === 1 ? '' : 's'} to "${newCat}"?`)) {
+              const res = await axios.post(
+                `${apiUrl}/rpc/recategorize-similar`,
+                { description: desc, category: newCat, apply: true },
+                { headers: { Authorization: `Bearer ${auth.token}` } }
+              )
+              toast.success(`Updated ${res.data?.updated || 0} matching transaction${res.data?.updated === 1 ? '' : 's'}`)
               invalidateCategories()
             }
           } catch (err) {
