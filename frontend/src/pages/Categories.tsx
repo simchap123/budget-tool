@@ -31,8 +31,9 @@ export function Categories() {
       const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
 
+      const filter = encodeURIComponent(`(userId='${auth.record.id}')`)
       const response = await axios.get(
-        `${apiUrl}/collections/categories/records?filter=(userId='${auth.record.id}')`,
+        `${apiUrl}/collections/categories/records?filter=${filter}`,
         { headers: { Authorization: `Bearer ${auth.token}` } }
       ).catch(() => ({ data: { items: [] } }))
 

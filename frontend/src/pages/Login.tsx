@@ -20,20 +20,15 @@ export function Login({
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
-      console.log('Login API URL:', apiUrl)
-      console.log('Logging in with email:', email)
 
       const response = await axios.post(
         `${apiUrl}/collections/users/auth-with-password`,
         { identity: email, password }
       )
 
-      console.log('Login successful:', response.data.record)
       localStorage.setItem('pb_auth', JSON.stringify(response.data))
       onSuccess(response.data.record)
     } catch (err: any) {
-      console.error('Login error:', err)
-      console.error('Error response:', err.response?.data)
       setError(err.response?.data?.message || err.message || 'Login failed')
     } finally {
       setLoading(false)

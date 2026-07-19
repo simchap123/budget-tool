@@ -13,8 +13,7 @@
     "axios": "^1.6.0",
     "clsx": "^2.0.0",
     "date-fns": "^3.0.0",
-    "lucide-react": "^0.294.0",
-    "playwright": "^1.61.1",
+    "lucide-react": "^0.474.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.10.0"
@@ -28,6 +27,7 @@
     "autoprefixer": "^10.4.0",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "playwright": "^1.61.1",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
     "terser": "^5.49.0",

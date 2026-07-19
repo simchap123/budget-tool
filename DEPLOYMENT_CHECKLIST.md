@@ -211,12 +211,20 @@
 
 ## Build Status
 
+Verified from a clean `npm install` on 2026-07-19:
+
 ```
-✓ TypeScript: 0 errors, 0 warnings
-✓ Vite build: 698.91 kB (193.75 kB gzip)
-✓ Production build location: frontend/dist/
-✓ All assets compiled successfully
+✓ npm install: clean (lucide-react bumped to ^0.474.0 for React 19 support)
+✓ TypeScript (tsc --noEmit): 0 errors
+✓ ESLint (npm run lint): 0 errors, 0 warnings (config added: .eslintrc.cjs)
+✓ Vite build: ~699 kB (193.8 kB gzip)
+✓ PWA assets in dist/: favicon.svg, icon-192.png, icon-512.png, manifest.json, service-worker.js
 ```
+
+> Note: the previous "0 errors / 698.91 kB" claim was not reproducible from a
+> clean install — `lucide-react@0.294.0` capped at React 18 and broke
+> `npm install`. Fixed. Also fixed: unencoded `&&` in Budget page PocketBase
+> filter queries (silently broke budget loading).
 
 ---
 

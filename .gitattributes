@@ -1,0 +1,4 @@
+# Keep shell scripts LF so they run on the Linux droplet regardless of the
+# checkout platform (a Windows CRLF checkout breaks the shebang).
+*.sh text eol=lf
+deploy/scripts/* text eol=lf

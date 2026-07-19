@@ -28,28 +28,20 @@ export function Signup({
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
-      console.log('Signup API URL:', apiUrl)
 
-      console.log('Creating user...')
-      const createResponse = await axios.post(
+      await axios.post(
         `${apiUrl}/collections/users/records`,
         { email, password, passwordConfirm, name }
       )
-      console.log('User created:', createResponse.data)
 
-      console.log('Logging in...')
       const loginResponse = await axios.post(
         `${apiUrl}/collections/users/auth-with-password`,
         { identity: email, password }
       )
-      console.log('Login response:', loginResponse.data)
 
       localStorage.setItem('pb_auth', JSON.stringify(loginResponse.data))
       onSuccess(loginResponse.data.record)
     } catch (err: any) {
-      console.error('Signup error:', err)
-      console.error('Error response:', err.response?.data)
-
       // Extract detailed error message from validation errors
       const responseData = err.response?.data
       let errorMessage = 'Signup failed'

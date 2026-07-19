@@ -40,13 +40,16 @@ export function Budget() {
       const monthEnd = new Date(year, month, 0)
       const monthEndStr = monthEnd.toISOString().split('T')[0]
 
+      const budgetFilter = encodeURIComponent(`(userId='${auth.record.id}'&&year=${year}&&month=${month})`)
+      const txnFilter = encodeURIComponent(`(date>='${monthStart}'&&date<='${monthEndStr}'&&type='expense')`)
+
       const [budgetResponse, transactionResponse] = await Promise.all([
         axios.get(
-          `${apiUrl}/collections/budgets/records?filter=(userId='${auth.record.id}'&&year=${year}&&month=${month})`,
+          `${apiUrl}/collections/budgets/records?filter=${budgetFilter}`,
           { headers: { Authorization: `Bearer ${auth.token}` } }
         ).catch(() => ({ data: { items: [] } })),
         axios.get(
-          `${apiUrl}/collections/transactions/records?filter=(date>='${monthStart}'&&date<='${monthEndStr}'&&type='expense')&perPage=500`,
+          `${apiUrl}/collections/transactions/records?filter=${txnFilter}&perPage=500`,
           { headers: { Authorization: `Bearer ${auth.token}` } }
         ),
       ])

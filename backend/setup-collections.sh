@@ -81,6 +81,24 @@ curl -s -X POST "$POCKETBASE_URL/api/collections" \
     ]
   }' > /dev/null
 
+# Create budgets collection (zero-based budgeting per category/month)
+# The Budget page queries: filter=(userId=..&&year=..&&month=..) and reads
+# fields category, budgetAmount, year, month.
+curl -s -X POST "$POCKETBASE_URL/api/collections" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: $ADMIN_TOKEN" \
+  -d '{
+    "name": "budgets",
+    "type": "base",
+    "schema": [
+      {"id": "category", "name": "category", "type": "text", "required": true},
+      {"id": "budgetAmount", "name": "budgetAmount", "type": "number", "required": true},
+      {"id": "year", "name": "year", "type": "number", "required": true},
+      {"id": "month", "name": "month", "type": "number", "required": true},
+      {"id": "userId", "name": "userId", "type": "relation", "collectionId": "_pb_users_auth_", "required": true}
+    ]
+  }' > /dev/null
+
 # Create rules collection (for auto-categorization)
 curl -s -X POST "$POCKETBASE_URL/api/collections" \
   -H "Content-Type: application/json" \
