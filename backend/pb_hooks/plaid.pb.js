@@ -123,6 +123,8 @@ routerAdd("POST", "/api/plaid/sync", (c) => {
           item.set("needsReauth", true);
           dao.saveRecord(item);
           needsReauth.push(item.get("itemId"));
+        } else {
+          console.log("[plaid] sync failed for item", item.get("itemId"), ":", String((e && e.message) || e));
         }
       }
     }
@@ -251,6 +253,9 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
 
     const { plaidCall, mapTxn } = require(`${__hooks}/plaid_lib.js`);
     const body = $apis.requestInfo(c).data || {};
+    // Observability: log receipt (type/code only — never tokens) so a real
+    // connection (e.g. Chase) is traceable in `pm2 logs budget-tool-pocketbase`.
+    console.log("[plaid] webhook received:", body.webhook_type || "?", body.webhook_code || "?", body.item_id ? "item=" + body.item_id : "");
     const dao = $app.dao();
     const txCol = dao.findCollectionByNameOrId("transactions");
 
@@ -298,9 +303,14 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
       } catch (e) { /* unknown session */ }
       // One-time mapping — remove it now the session is done (connect or reconnect).
       if (pendRec) { try { dao.deleteRecord(pendRec); } catch (e) { /* ignore */ } }
+      if (!userId) {
+        console.log("[plaid] session finished but no pending mapping for link_token — ignoring");
+      }
       if (userId) {
         const itemsCol = dao.findCollectionByNameOrId("plaid_items");
-        (body.public_tokens || []).forEach((pt) => {
+        const tokens = body.public_tokens || [];
+        console.log("[plaid] session finished for user", userId, "-", tokens.length, "token(s)");
+        tokens.forEach((pt) => {
           try {
             const ex = plaidCall("/item/public_token/exchange", { public_token: pt });
             // Resolve the institution name (e.g. "Chase") for the UI.
@@ -318,7 +328,10 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
             });
             dao.saveRecord(item);
             syncItem(item, userId);
-          } catch (e) { /* skip a bad token */ }
+            console.log("[plaid] connected item", ex.item_id, instName ? "(" + instName + ")" : "", "and synced");
+          } catch (e) {
+            console.log("[plaid] exchange/sync failed for a token:", String((e && e.message) || e));
+          }
         });
       }
     }
@@ -329,7 +342,10 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
       try {
         const item = dao.findFirstRecordByFilter("plaid_items", "itemId = {:id}", { id: body.item_id });
         syncItem(item, item.get("userId"));
-      } catch (e) { /* unknown item */ }
+        console.log("[plaid] synced updates for item", body.item_id);
+      } catch (e) {
+        console.log("[plaid] sync-updates failed for item", body.item_id, ":", String((e && e.message) || e));
+      }
     }
 
     // A connection needs re-authentication (password change / expired consent).
@@ -342,6 +358,7 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
     }
     return c.json(200, { received: true });
   } catch (err) {
+    console.log("[plaid] webhook handler error:", String((err && err.message) || err));
     return c.json(200, { received: true });
   }
 });
