@@ -91,6 +91,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
           const amount = parseFloat(data.amount || data.Amount || '0')
           const type = (data.type || data.Type || 'expense').toLowerCase()
           const category = data.category || data.Category || 'Uncategorized'
+          const note = data.note || data.Note || ''
 
           if (!description || amount === 0) {
             failed++
@@ -104,6 +105,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
               description,
               type: type === 'income' || type === 'in' ? 'income' : 'expense',
               category,
+              note,
               userId: auth.record.id,
               date: normalizeDate(date),
             },

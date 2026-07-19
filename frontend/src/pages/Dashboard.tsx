@@ -23,7 +23,7 @@ export function Dashboard({ user }: { user: any }) {
   const [importOpen, setImportOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0] })
+  const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '', note: '', date: new Date().toISOString().split('T')[0] })
   const [submitting, setSubmitting] = useState(false)
   const [page, setPage] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
@@ -77,6 +77,7 @@ export function Dashboard({ user }: { user: any }) {
             description: formData.description,
             type: formData.type,
             category: formData.category || 'Uncategorized',
+            note: formData.note || '',
             date: formData.date,
           },
           {
@@ -95,6 +96,7 @@ export function Dashboard({ user }: { user: any }) {
             description: formData.description,
             type: formData.type,
             category: formData.category || 'Uncategorized',
+            note: formData.note || '',
             date: formData.date,
             userId: auth.record.id,
           },
@@ -107,7 +109,7 @@ export function Dashboard({ user }: { user: any }) {
         trackTransactionAction('add', formData.type)
       }
 
-      setFormData({ amount: '', description: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0] })
+      setFormData({ amount: '', description: '', type: 'expense', category: '', note: '', date: new Date().toISOString().split('T')[0] })
       setFormOpen(false)
       setEditingId(null)
       await fetchTransactions()
@@ -149,6 +151,7 @@ export function Dashboard({ user }: { user: any }) {
       description: txn.description,
       type: txn.type,
       category: txn.category || 'Uncategorized',
+      note: txn.note || '',
       // Stored dates look like "2026-07-16 00:00:00.000Z"; a <input type="date">
       // needs "YYYY-MM-DD", so take the first 10 chars (else the field goes blank).
       date: txn.date ? String(txn.date).slice(0, 10) : new Date().toISOString().split('T')[0],
@@ -183,8 +186,9 @@ export function Dashboard({ user }: { user: any }) {
       Amount: (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount ?? 0).toFixed(2),
       Type: t.type,
       Category: t.category || 'Uncategorized',
+      Note: t.note || '',
     }))
-    const csv = toCSV(rows, ['Date', 'Description', 'Amount', 'Type', 'Category'])
+    const csv = toCSV(rows, ['Date', 'Description', 'Amount', 'Type', 'Category', 'Note'])
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
@@ -366,6 +370,18 @@ export function Dashboard({ user }: { user: any }) {
                     required
                   />
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-body-sm font-normal text-ink-200 mb-2">
+                    Note (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Add a note…"
+                    value={formData.note}
+                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                    className="input-base"
+                  />
+                </div>
               </div>
               <button
                 type="submit"
@@ -423,7 +439,12 @@ export function Dashboard({ user }: { user: any }) {
                     <td className="text-ink-300">
                       {new Date(txn.date).toLocaleDateString()}
                     </td>
-                    <td className="text-ink-300">{txn.description}</td>
+                    <td className="text-ink-300">
+                      {txn.description}
+                      {txn.note && (
+                        <span className="block text-body-sm text-ink-500 italic">{txn.note}</span>
+                      )}
+                    </td>
                     <td className="text-ink-400">{txn.category || 'Uncategorized'}</td>
                     <td className="text-right">
                       <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
