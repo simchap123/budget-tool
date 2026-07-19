@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { trackImport } from '../utils/analytics'
+import { normalizeDate } from '../utils/dateRange'
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = []
@@ -109,7 +110,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
               type: type === 'income' || type === 'in' ? 'income' : 'expense',
               category,
               userId: auth.record.id,
-              date: date,
+              date: normalizeDate(date),
             },
             {
               headers: {

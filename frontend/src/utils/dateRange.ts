@@ -17,6 +17,26 @@ export function monthLabel(ym: string): string {
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
+// Normalize common CSV date formats (YYYY-MM-DD, MM-DD-YYYY, MM/DD/YYYY, or
+// anything Date can parse) to PocketBase's "YYYY-MM-DD 00:00:00.000Z" so imported
+// transactions are filterable by month.
+export function normalizeDate(input: string): string {
+  const s = String(input || '').trim()
+  let iso: string
+  let m: RegExpMatchArray | null
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) {
+    iso = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
+  } else if ((m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/))) {
+    iso = `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`
+  } else {
+    const d = new Date(s)
+    iso = isNaN(d.getTime())
+      ? new Date().toISOString().slice(0, 10)
+      : d.toISOString().slice(0, 10)
+  }
+  return `${iso} 00:00:00.000Z`
+}
+
 // Shift a "YYYY-MM" string by delta months, timezone-safe.
 export function shiftMonth(ym: string, delta: number): string {
   const [y, m] = ym.split('-').map(Number)
