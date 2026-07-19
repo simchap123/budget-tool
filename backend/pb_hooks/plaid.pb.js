@@ -146,6 +146,9 @@ routerAdd("GET", "/api/plaid/status", (c) => {
       itemId: i.get("itemId"),
       institution: i.get("institution"),
       needsReauth: !!i.get("needsReauth"),
+      // The record is saved on every sync, so its built-in `updated` timestamp
+      // is effectively "last synced" (no extra schema field needed).
+      lastSynced: i.getString("updated"),
     }));
     return c.json(200, { connected: items.length > 0, items: items });
   } catch (err) {

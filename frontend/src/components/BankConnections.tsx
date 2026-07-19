@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { AlertTriangle, Landmark, RefreshCw, Trash2 } from 'lucide-react'
 import { useToast } from './ui/Toast'
+import { timeAgo } from '../utils/timeAgo'
 
 interface BankItem {
   itemId: string
   institution: string
   needsReauth: boolean
+  lastSynced?: string
 }
 
 // Lists the user's linked banks with a manual sync, reconnect (if flagged), and
@@ -89,6 +91,9 @@ export function BankConnections({ onSynced }: { onSynced?: () => void }) {
             <div className="flex items-center gap-2 min-w-0">
               <Landmark size={16} className="text-accent-breeze shrink-0" />
               <span className="text-body-sm text-ink-200 truncate">{it.institution || 'Connected bank'}</span>
+              {it.lastSynced && !it.needsReauth && (
+                <span className="text-body-sm text-ink-500 shrink-0">· synced {timeAgo(it.lastSynced)}</span>
+              )}
               {it.needsReauth && (
                 <span className="inline-flex items-center gap-1 text-body-sm text-yellow-400">
                   <AlertTriangle size={14} /> needs reconnect
