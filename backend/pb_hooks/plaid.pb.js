@@ -158,12 +158,13 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
   try {
     // Authenticate the caller. Plaid signs webhooks with an ES256 JWT
     // (Plaid-Verification header), but ECDSA/JWK verification isn't practical in
-    // the PocketBase JSVM, so we require a secret in the webhook URL that only
-    // our backend configures on the link token. Combined with the plaid_pending
-    // mapping guard below, this blocks forged webhooks.
+    // the PocketBase JSVM, and Plaid does NOT support custom webhook_headers
+    // (verified: UNKNOWN_FIELDS). So we require a secret in the webhook URL that
+    // only our backend sets on the link token, fail-closed (reject if the secret
+    // isn't configured), plus the plaid_pending mapping guard below.
     const expected = $os.getenv("PLAID_WEBHOOK_SECRET") || "";
     const provided = ($apis.requestInfo(c).query || {}).key || "";
-    if (expected && provided !== expected) {
+    if (!expected || provided !== expected) {
       return c.json(401, { error: "unauthorized" });
     }
 
