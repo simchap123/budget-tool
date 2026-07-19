@@ -6,6 +6,7 @@ import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { computeGiving, GivingSummary } from '../utils/givingCalc'
 import { monthLabel } from '../utils/dateRange'
 import { fetchAllRecords } from '../utils/fetchAll'
+import { CategorySelect } from '../components/ui/CategorySelect'
 
 export function Giving() {
   const toast = useToast()
@@ -121,29 +122,25 @@ export function Giving() {
           </div>
           <div className="min-w-[12rem]">
             <label className="block text-body-sm text-ink-400 mb-1">Giving category</label>
-            <input
-              list="giving-cats" value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. Charity or Tithe"
-              aria-label="Giving category"
+            <CategorySelect
+              value={category}
+              onChange={setCategory}
+              categories={categories}
+              ariaLabel="Giving category"
+              placeholder="Pick a category (e.g. Charity)"
               className="input-base w-full"
             />
-            <datalist id="giving-cats">
-              {categories.map((c) => <option key={c} value={c} />)}
-            </datalist>
           </div>
           <div className="min-w-[12rem]">
             <label className="block text-body-sm text-ink-400 mb-1">Tithe on income from</label>
-            <input
-              list="income-cats" value={incomeCategory}
-              onChange={(e) => setIncomeCategory(e.target.value)}
+            <CategorySelect
+              value={incomeCategory}
+              onChange={setIncomeCategory}
+              categories={incomeCategories}
+              ariaLabel="Income source category"
               placeholder="All income"
-              aria-label="Income source category"
               className="input-base w-full"
             />
-            <datalist id="income-cats">
-              {incomeCategories.map((c) => <option key={c} value={c} />)}
-            </datalist>
           </div>
           <button type="submit" disabled={saving} className="btn-primary py-2 px-4 disabled:opacity-50">
             {saving ? 'Saving…' : 'Save goal'}

@@ -15,6 +15,8 @@ import { monthRange, formatDate } from '../utils/dateRange'
 import { toCSV } from '../utils/csv'
 import { filterTransactions } from '../utils/search'
 import { reportTotals, txAmount } from '../utils/reportStats'
+import { CategorySelect } from '../components/ui/CategorySelect'
+import { useCategories } from '../hooks/useCategories'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -26,6 +28,7 @@ export function Dashboard({ user }: { user: any }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [formData, setFormData] = useState({ amount: '', description: '', type: 'expense', category: '', note: '', date: new Date().toISOString().split('T')[0] })
+  const categories = useCategories()
   const [submitting, setSubmitting] = useState(false)
   const [page, setPage] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
@@ -339,11 +342,12 @@ export function Dashboard({ user }: { user: any }) {
                   <label className="block text-body-sm font-normal text-ink-200 mb-2">
                     Category
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Groceries"
+                  <CategorySelect
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    onChange={(v) => setFormData({ ...formData, category: v })}
+                    categories={categories}
+                    ariaLabel="Transaction category"
+                    placeholder="Pick or add a category"
                     className="input-base"
                   />
                 </div>

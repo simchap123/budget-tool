@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Wand2 } from 'lucide-react'
 import { useToast } from './ui/Toast'
 import { fetchAllRecords } from '../utils/fetchAll'
+import { CategorySelect } from './ui/CategorySelect'
 
 // Find every transaction whose description contains a term (across all history)
 // and recategorize them in one confirmed action — for cleaning up big buckets
@@ -108,16 +109,14 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
               <div className="mt-3 flex flex-wrap items-end gap-3">
                 <div className="min-w-[10rem]">
                   <label className="block text-body-sm text-ink-400 mb-1">Move all to</label>
-                  <input
-                    list="recat-cats" value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    placeholder="Category"
-                    aria-label="Target category"
+                  <CategorySelect
+                    value={target}
+                    onChange={setTarget}
+                    categories={categories}
+                    ariaLabel="Target category"
+                    placeholder="Pick or add a category"
                     className="input-base w-full"
                   />
-                  <datalist id="recat-cats">
-                    {categories.map((c) => <option key={c} value={c} />)}
-                  </datalist>
                 </div>
                 <button onClick={apply} disabled={busy || !target.trim()} className="btn-primary py-2 px-4 disabled:opacity-50">
                   {busy ? 'Applying…' : `Recategorize ${matches.length}`}

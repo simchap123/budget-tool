@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
+import { CategorySelect } from '../components/ui/CategorySelect'
 import { monthRange } from '../utils/dateRange'
 import { averageMonthlySpend } from '../utils/budgetSuggest'
 import { txAmount } from '../utils/reportStats'
@@ -288,21 +289,18 @@ export function Budget() {
           <form onSubmit={handleSaveBudget} className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
             <div>
               <label className="block text-body-sm font-normal text-ink-200 mb-2">Category</label>
-              <input
-                type="text"
-                list="budget-categories"
-                placeholder="e.g., Groceries"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="input-base"
-                disabled={!!editingId}
-                required
-              />
-              <datalist id="budget-categories">
-                {knownCategories.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
+              {editingId ? (
+                <input type="text" value={formData.category} disabled className="input-base opacity-60" />
+              ) : (
+                <CategorySelect
+                  value={formData.category}
+                  onChange={(v) => setFormData({ ...formData, category: v })}
+                  categories={knownCategories}
+                  ariaLabel="Budget category"
+                  placeholder="Pick or add a category"
+                  className="input-base"
+                />
+              )}
             </div>
             <div>
               <label className="block text-body-sm font-normal text-ink-200 mb-2">Monthly amount</label>
