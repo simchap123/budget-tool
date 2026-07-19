@@ -9,8 +9,12 @@ actions (dashboards, not code) plus day-to-day ops.
 ## 1. Connect Chase (Plaid — fully built)
 
 The full Plaid **Hosted Link** flow is built, secured, and verified end-to-end in
-sandbox. Chase is HEALTHY in production and the config is correct (`redirect_uri`
-registered + accepted). **The only remaining step is entering your Chase login.**
+sandbox. Chase availability is **confirmed in production**: `/institutions/search`
+with the live production creds returns **Chase `ins_56`, `oauth: true`, transactions
+product** — so there is no Plaid enrollment/access blocker. The production
+`create-hosted-link` returns a real `link-production-*` token on `secure.plaid.com`,
+and the webhook is publicly reachable + fail-closed (401 without the key).
+**The only remaining step is entering your Chase login.**
 
 ### How it works (all live)
 - **"Connect Bank"** → `POST /api/plaid/create-hosted-link` → redirects you to
@@ -21,20 +25,28 @@ registered + accepted). **The only remaining step is entering your Chase login.*
   webhook headers, and ES256/JWK verification isn't feasible in the JSVM, so this
   URL secret + the `plaid_pending` mapping is the auth).
 - The webhook exchanges the token, stores the item (`plaid_items`), and syncs.
-- `TRANSACTIONS/SYNC_UPDATES_AVAILABLE` webhooks keep pulling data as Plaid
-  prepares your full history. All syncs dedupe by `plaidId` (no duplicates).
-- On return (`/?plaid=done`) the app polls `/api/plaid/sync` so transactions show.
+- `TRANSACTIONS/SYNC_UPDATES_AVAILABLE` webhooks keep pulling data server-side as
+  Plaid prepares your full history (Chase histories are large and arrive async).
+  All syncs dedupe by `plaidId` (no duplicates).
+- On return (`/?plaid=done`) the app watches your transaction count for ~90s using
+  cheap local checks (not repeated Plaid calls) and **auto-refreshes the moment
+  transactions land** — so a large Chase history appears without a manual reload.
+- Afterwards, **"Sync now"** in the *Connected banks* panel pulls newly-posted
+  transactions on demand (reports the count; safely idempotent).
 
 ### To connect
 1. Open **budget.grotketech.com** in an **incognito** window; log in.
 2. **Connect Bank** → pick **Chase** on Plaid's page → sign in → authorize.
-3. Transactions pull in automatically.
+3. Transactions import automatically and appear on the dashboard within ~90s;
+   use **Sync now** anytime to pull the latest.
 
 ### If Chase errors on Plaid's page
-That would be a Plaid/Chase **production-enrollment** matter (not our code):
+Chase `ins_56` is confirmed available for this account (see above), so the code and
+access are ruled out — an error here would be a Plaid/Chase **production-enrollment**
+matter (not our code):
 - Plaid Dashboard → confirm the Production application is fully **approved**.
-- Check Chase (`ins_56`) institution status for your account; JPMorgan requires
-  per-customer enrollment (can take 1–2 days after registration requirements).
+- JPMorgan may require per-customer enrollment (can take 1–2 days after meeting
+  registration requirements) even though the institution shows available.
 - Sanity check: connect a *different* bank — if it syncs, Chase is purely enrollment.
 - Read the authenticated webhook + `pm2 logs budget-tool-pocketbase` to see the
   exact Plaid-side result.
