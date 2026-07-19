@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { pageNumbers } from '../../utils/pagination'
 
 interface PaginationProps {
   page: number
@@ -7,38 +8,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = []
-    const maxVisible = 5
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i)
-      }
-    } else {
-      pages.push(1)
-
-      if (page > 3) {
-        pages.push('...')
-      }
-
-      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
-        if (!pages.includes(i)) {
-          pages.push(i)
-        }
-      }
-
-      if (page < totalPages - 2) {
-        pages.push('...')
-      }
-
-      pages.push(totalPages)
-    }
-
-    return pages
-  }
-
-  const pages = getPageNumbers()
+  const pages = pageNumbers(page, totalPages)
 
   return (
     <div className="flex items-center justify-center gap-2 mt-8">

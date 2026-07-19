@@ -1,3 +1,5 @@
+import { budgetPercent, budgetBarColor } from '../../utils/budgetBar'
+
 interface BudgetProgressBarProps {
   spent: number
   budgeted: number
@@ -5,14 +7,8 @@ interface BudgetProgressBarProps {
 }
 
 export function BudgetProgressBar({ spent, budgeted, color = '#ff7a17' }: BudgetProgressBarProps) {
-  const percentage = budgeted > 0 ? Math.min((spent / budgeted) * 100, 100) : 0
-
-  let barColor = color
-  if (percentage >= 90 && percentage < 100) {
-    barColor = '#fbbf24'
-  } else if (percentage >= 100) {
-    barColor = '#f87171'
-  }
+  const percentage = budgetPercent(spent, budgeted)
+  const barColor = budgetBarColor(percentage, color)
 
   return (
     <div className="space-y-2">
