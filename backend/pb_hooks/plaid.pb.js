@@ -170,17 +170,52 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
 
     const { plaidCall, mapTxn } = require(`${__hooks}/plaid_lib.js`);
     const body = $apis.requestInfo(c).data || {};
+    const dao = $app.dao();
+    const txCol = dao.findCollectionByNameOrId("transactions");
+
+    // Cursor-based sync of one item, deduped by plaidId (added/modified/removed).
+    const syncItem = (item, userId) => {
+      const findByPlaidId = (pid) => {
+        try {
+          return dao.findFirstRecordByFilter(
+            "transactions", "plaidId = {:p} && userId = {:u}", { p: pid, u: userId }
+          );
+        } catch (e) { return null; }
+      };
+      let cursor = item.get("cursor") || "", hasMore = true;
+      while (hasMore) {
+        const payload = { access_token: item.get("accessToken"), count: 250 };
+        if (cursor) payload.cursor = cursor;
+        const page = plaidCall("/transactions/sync", payload);
+        (page.added || []).forEach((t) => {
+          if (!findByPlaidId(t.transaction_id)) dao.saveRecord(new Record(txCol, mapTxn(t, userId)));
+        });
+        (page.modified || []).forEach((t) => {
+          const r = findByPlaidId(t.transaction_id) || new Record(txCol);
+          const m = mapTxn(t, userId);
+          for (const k in m) r.set(k, m[k]);
+          dao.saveRecord(r);
+        });
+        (page.removed || []).forEach((rm) => {
+          const ex = findByPlaidId(rm.transaction_id);
+          if (ex) dao.deleteRecord(ex);
+        });
+        cursor = page.next_cursor;
+        hasMore = page.has_more;
+      }
+      item.set("cursor", cursor);
+      dao.saveRecord(item);
+    };
+
+    // Hosted Link completed: exchange public token(s), store item(s), sync.
     if (body.webhook_type === "LINK" && body.webhook_code === "SESSION_FINISHED" && body.status === "SUCCESS") {
-      const dao = $app.dao();
       let userId = "";
       try {
         const pend = dao.findFirstRecordByFilter("plaid_pending", "linkToken = {:lt}", { lt: body.link_token });
         userId = pend.get("userId");
       } catch (e) { /* unknown session */ }
-
       if (userId) {
         const itemsCol = dao.findCollectionByNameOrId("plaid_items");
-        const txCol = dao.findCollectionByNameOrId("transactions");
         (body.public_tokens || []).forEach((pt) => {
           try {
             const ex = plaidCall("/item/public_token/exchange", { public_token: pt });
@@ -188,20 +223,19 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
               userId: userId, accessToken: ex.access_token, itemId: ex.item_id, institution: "", cursor: "",
             });
             dao.saveRecord(item);
-            let cursor = "", hasMore = true;
-            while (hasMore) {
-              const payload = { access_token: ex.access_token, count: 250 };
-              if (cursor) payload.cursor = cursor;
-              const page = plaidCall("/transactions/sync", payload);
-              (page.added || []).forEach((t) => dao.saveRecord(new Record(txCol, mapTxn(t, userId))));
-              cursor = page.next_cursor;
-              hasMore = page.has_more;
-            }
-            item.set("cursor", cursor);
-            dao.saveRecord(item);
+            syncItem(item, userId);
           } catch (e) { /* skip a bad token */ }
         });
       }
+    }
+
+    // Plaid signals new transaction data is ready (esp. large histories like
+    // Chase): sync that item so transactions land even after the UI polling ends.
+    if (body.webhook_type === "TRANSACTIONS" && body.webhook_code === "SYNC_UPDATES_AVAILABLE") {
+      try {
+        const item = dao.findFirstRecordByFilter("plaid_items", "itemId = {:id}", { id: body.item_id });
+        syncItem(item, item.get("userId"));
+      } catch (e) { /* unknown item */ }
     }
     return c.json(200, { received: true });
   } catch (err) {
