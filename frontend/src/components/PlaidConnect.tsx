@@ -44,11 +44,31 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
       await axios.post(`${apiUrl}/plaid/exchange-public-token`, { public_token, institution: institution || '' }, { headers: headers() })
       localStorage.removeItem(TOKEN_KEY)
       window.history.replaceState({}, '', window.location.pathname)
-      toast.success('Bank connected — importing transactions…')
-      try {
-        const { data } = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
-        if (data.added > 0) toast.success(`Imported ${data.added} transactions`)
-      } catch { /* webhook will also sync large histories */ }
+      toast.success('Bank connected — importing your full history…')
+
+      // Chase's history (up to 24 months) loads over time (INITIAL_UPDATE ~30 days,
+      // then HISTORICAL_UPDATE). Keep calling /transactions/sync (cursor-based) until
+      // it stops returning new transactions — so ALL of it pulls in without relying
+      // on the webhook. Early data appears live; the rest fills in.
+      let total = 0
+      let quiet = 0
+      for (let i = 0; i < 30 && quiet < 4; i++) {
+        let added = 0
+        try {
+          const { data } = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
+          added = data.added || 0
+        } catch { /* PRODUCT_NOT_READY early on — just retry */ }
+        if (added > 0) {
+          total += added
+          quiet = 0
+          onSynced() // refresh the dashboard as batches land
+        } else {
+          quiet++
+        }
+        if (quiet >= 4) break
+        await new Promise((r) => setTimeout(r, 6000))
+      }
+      toast.success(total > 0 ? `Imported ${total} transactions` : 'Connected — transactions will appear shortly')
       onSynced()
     } catch (e: any) {
       toast.error('Connect failed: ' + (e.response?.data?.error || e.message))
