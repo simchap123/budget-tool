@@ -195,6 +195,7 @@ routerAdd("POST", "/api/plaid/reconnect", (c) => {
       country_codes: ["US"],
       language: "en",
       access_token: item.get("accessToken"),
+      redirect_uri: $os.getenv("PLAID_REDIRECT_URI") || base,
       webhook: base + "/api/plaid/webhook" + (($os.getenv("PLAID_WEBHOOK_SECRET") || "") ? "?key=" + $os.getenv("PLAID_WEBHOOK_SECRET") : ""),
       hosted_link: { completion_redirect_uri: base + "/?plaid=done" },
     });
@@ -222,6 +223,10 @@ routerAdd("POST", "/api/plaid/create-hosted-link", (c) => {
       products: ["transactions"],
       country_codes: ["US"],
       language: "en",
+      // redirect_uri is REQUIRED for OAuth institutions (Chase does app-to-app /
+      // mobile OAuth). Without it, Chase's authorize endpoint 500s. Must match a
+      // URI registered in the Plaid dashboard.
+      redirect_uri: $os.getenv("PLAID_REDIRECT_URI") || base,
       webhook: base + "/api/plaid/webhook" + (($os.getenv("PLAID_WEBHOOK_SECRET") || "") ? "?key=" + $os.getenv("PLAID_WEBHOOK_SECRET") : ""),
       hosted_link: { completion_redirect_uri: base + "/?plaid=done" },
     });
