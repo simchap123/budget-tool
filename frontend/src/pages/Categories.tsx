@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Trash2 } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
+import { BulkRecategorize } from '../components/BulkRecategorize'
 
 interface Category {
   id: string
@@ -136,6 +137,11 @@ export function Categories() {
         >
           {showForm ? '✕ Cancel' : '+ New'}
         </button>
+      </div>
+
+      {/* Bulk recategorize — clean up big buckets like "Random" across all history */}
+      <div className="mt-6">
+        <BulkRecategorize categories={categories.map((c) => c.name)} onDone={() => {}} />
       </div>
 
       {/* Form */}
