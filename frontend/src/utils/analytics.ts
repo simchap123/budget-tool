@@ -77,7 +77,7 @@ export function flushEvents() {
   eventBatch = []
 }
 
-export async function getAnalytics(days: number = 30): Promise<{
+export interface AnalyticsSummary {
   totalTransactions: number
   totalImported: number
   avgMonthlySpend: number
@@ -85,7 +85,45 @@ export async function getAnalytics(days: number = 30): Promise<{
   dailyActivity: Array<{ date: string; count: number }>
   pageViews: Array<{ page: string; count: number }>
   topTransactionTypes: Array<{ type: string; count: number }>
-}> {
+}
+
+// Pure aggregation of raw analytics events into the dashboard summary. `now` is
+// injected so this is deterministically testable.
+export function summarizeEvents(events: AnalyticsEvent[], days: number, now: number): AnalyticsSummary {
+  const cutoffTime = now - days * 24 * 60 * 60 * 1000
+  const recentEvents = events.filter((e) => e.timestamp >= cutoffTime)
+
+  const totalTransactions = recentEvents.filter((e) => e.eventType === 'transaction_action' && e.category === 'add').length
+  const totalImported = recentEvents.filter((e) => e.eventType === 'csv_import').reduce((sum, e) => sum + (typeof e.value === 'number' ? e.value : 0), 0)
+
+  const dailyMap: { [key: string]: number } = {}
+  recentEvents.forEach((e) => {
+    const date = new Date(e.timestamp).toISOString().split('T')[0]
+    dailyMap[date] = (dailyMap[date] || 0) + 1
+  })
+  const pageViewMap: { [key: string]: number } = {}
+  recentEvents.filter((e) => e.eventType === 'page_view').forEach((e) => {
+    const page = String(e.value || 'unknown')
+    pageViewMap[page] = (pageViewMap[page] || 0) + 1
+  })
+  const txnTypeMap: { [key: string]: number } = {}
+  recentEvents.filter((e) => e.eventType === 'transaction_action').forEach((e) => {
+    const type = e.value ? String(e.value) : e.category
+    txnTypeMap[type] = (txnTypeMap[type] || 0) + 1
+  })
+
+  return {
+    totalTransactions,
+    totalImported,
+    avgMonthlySpend: 0,
+    savingsRate: 0,
+    dailyActivity: Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date)),
+    pageViews: Object.entries(pageViewMap).map(([page, count]) => ({ page, count })).sort((a, b) => b.count - a.count).slice(0, 8),
+    topTransactionTypes: Object.entries(txnTypeMap).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count).slice(0, 5),
+  }
+}
+
+export async function getAnalytics(days: number = 30): Promise<AnalyticsSummary> {
   if (!db) return { totalTransactions: 0, totalImported: 0, avgMonthlySpend: 0, savingsRate: 0, dailyActivity: [], pageViews: [], topTransactionTypes: [] }
 
   return new Promise((resolve) => {
@@ -94,49 +132,7 @@ export async function getAnalytics(days: number = 30): Promise<{
     const request = store.getAll()
 
     request.onsuccess = () => {
-      const events = request.result as AnalyticsEvent[]
-      const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000
-
-      const recentEvents = events.filter((e) => e.timestamp >= cutoffTime)
-
-      const transactionCount = recentEvents.filter((e) => e.eventType === 'transaction_action' && e.category === 'add').length
-      const importCount = recentEvents.filter((e) => e.eventType === 'csv_import').reduce((sum, e) => sum + (typeof e.value === 'number' ? e.value : 0), 0)
-
-      const dailyMap: { [key: string]: number } = {}
-      recentEvents.forEach((e) => {
-        const date = new Date(e.timestamp).toISOString().split('T')[0]
-        dailyMap[date] = (dailyMap[date] || 0) + 1
-      })
-
-      const pageViewMap: { [key: string]: number } = {}
-      recentEvents.filter((e) => e.eventType === 'page_view').forEach((e) => {
-        const page = String(e.value || 'unknown')
-        pageViewMap[page] = (pageViewMap[page] || 0) + 1
-      })
-
-      const txnTypeMap: { [key: string]: number } = {}
-      recentEvents.filter((e) => e.eventType === 'transaction_action').forEach((e) => {
-        const type = e.value ? String(e.value) : e.category
-        txnTypeMap[type] = (txnTypeMap[type] || 0) + 1
-      })
-
-      resolve({
-        totalTransactions: transactionCount,
-        totalImported: importCount,
-        avgMonthlySpend: 0,
-        savingsRate: 0,
-        dailyActivity: Object.entries(dailyMap)
-          .map(([date, count]) => ({ date, count }))
-          .sort((a, b) => a.date.localeCompare(b.date)),
-        pageViews: Object.entries(pageViewMap)
-          .map(([page, count]) => ({ page, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 8),
-        topTransactionTypes: Object.entries(txnTypeMap)
-          .map(([type, count]) => ({ type, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5),
-      })
+      resolve(summarizeEvents(request.result as AnalyticsEvent[], days, Date.now()))
     }
   })
 }
@@ -167,6 +163,9 @@ export function deleteOldEvents(days: number = 90) {
   }
 }
 
-window.addEventListener('beforeunload', () => {
-  flushEvents()
-})
+// Guard against non-browser contexts (tests, SSR) where `window` is undefined.
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    flushEvents()
+  })
+}
