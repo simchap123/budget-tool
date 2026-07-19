@@ -55,7 +55,18 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
       }
       await new Promise((r) => setTimeout(r, 5000))
     }
-    toast.info('Bank connected. Your transactions are still importing and will appear shortly.')
+    // Window elapsed with no new transactions — distinguish "connected but still
+    // importing" from "the connection never completed" so the message is honest.
+    let connected = false
+    try {
+      const r = await axios.get(`${apiUrl}/plaid/status`, { headers: headers() })
+      connected = !!r.data.connected
+    } catch { /* treat as unknown/failed below */ }
+    if (connected) {
+      toast.info('Bank connected. Your transactions are still importing and will appear shortly.')
+    } else {
+      toast.error("The bank connection didn't finish. Please try Connect Bank again.")
+    }
     onSynced()
     setLoading(false)
   }
