@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
+import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { monthRange } from '../utils/dateRange'
 
@@ -28,6 +29,7 @@ export function Budget() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({ category: '', budgetAmount: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchBudgetData()
@@ -150,6 +152,22 @@ export function Budget() {
       toast.error('Failed to save budget')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDeleteBudget = async (id: string) => {
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      await axios.delete(`${apiUrl}/collections/budgets/records/${id}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      })
+      toast.success('Budget removed')
+      setDeleteId(null)
+      await fetchBudgetData()
+    } catch (err) {
+      console.error('Error deleting budget:', err)
+      toast.error('Failed to remove budget')
     }
   }
 
@@ -305,6 +323,13 @@ export function Budget() {
                       >
                         <Pencil size={16} />
                       </button>
+                      <button
+                        onClick={() => setDeleteId(budget.id)}
+                        className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                        title="Delete budget"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                   <div className="mt-2">
@@ -320,6 +345,30 @@ export function Budget() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        title="Remove Budget?"
+        footer={
+          <div className="flex gap-3">
+            <button onClick={() => setDeleteId(null)} className="btn-secondary flex-1">
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteId && handleDeleteBudget(deleteId)}
+              className="btn-primary flex-1 bg-red-600 hover:bg-red-700"
+            >
+              Remove
+            </button>
+          </div>
+        }
+      >
+        <p className="text-ink-300">
+          Remove this budget? Your transactions in this category are not affected.
+        </p>
+      </Modal>
     </div>
   )
 }
