@@ -7,6 +7,7 @@ import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { monthRange } from '../utils/dateRange'
 import { averageMonthlySpend } from '../utils/budgetSuggest'
 import { txAmount } from '../utils/reportStats'
+import { fetchAllRecords } from '../utils/fetchAll'
 
 interface Budget {
   id: string
@@ -183,11 +184,10 @@ export function Budget() {
       const since = new Date(currentDate.getFullYear(), currentDate.getMonth() - 3, 1)
       const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-01`
       const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
-      const res = await axios.get(
-        `${apiUrl}/collections/transactions/records?perPage=500&filter=${filter}&sort=-date`,
-        { headers: { Authorization: `Bearer ${auth.token}` } }
-      )
-      const avg = averageMonthlySpend(res.data.items || [])
+      const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${filter}&sort=-date`, {
+        Authorization: `Bearer ${auth.token}`,
+      })
+      const avg = averageMonthlySpend(items)
       const existing = new Set(budgets.map((b) => b.categoryName))
       const toCreate = Object.entries(avg)
         .filter(([cat, amt]) => amt > 0 && !existing.has(cat))

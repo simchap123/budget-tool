@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
 import { CalendarClock } from 'lucide-react'
 import { detectRecurring, upcomingBills, RecurringItem } from '../utils/recurring'
 import { formatShortDate } from '../utils/dateRange'
+import { fetchAllRecords } from '../utils/fetchAll'
 
 // Compact Dashboard widget: recurring bills expected in the next ~3 weeks.
 // Renders nothing when there's nothing due (keeps the Dashboard uncluttered).
@@ -22,11 +22,10 @@ export function UpcomingBills() {
       since.setMonth(since.getMonth() - 6)
       const sinceStr = since.toISOString().slice(0, 10)
       const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
-      const res = await axios.get(
-        `${apiUrl}/collections/transactions/records?perPage=500&filter=${filter}&sort=-date`,
-        { headers: { Authorization: `Bearer ${auth.token}` } }
-      )
-      const recurring = detectRecurring(res.data.items || [])
+      const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${filter}&sort=-date`, {
+        Authorization: `Bearer ${auth.token}`,
+      })
+      const recurring = detectRecurring(items)
       const today = new Date().toISOString().slice(0, 10)
       setItems(upcomingBills(recurring, today, 21).slice(0, 5))
     } catch {

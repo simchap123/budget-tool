@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Percent, ChevronLeft, ChevronRight } from 'lucide-react'
 import { monthRange, monthLabel, shiftMonth } from '../utils/dateRange'
 import { categorySpendingTrend, TrendPoint } from '../utils/categoryTrend'
 import { reportTotals, categoryBreakdown, monthlyTrend } from '../utils/reportStats'
+import { fetchAllRecords } from '../utils/fetchAll'
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -28,11 +28,10 @@ export function Reports() {
         since.setMonth(since.getMonth() - 5)
         const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-01`
         const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
-        const res = await axios.get(
-          `${apiUrl}/collections/transactions/records?perPage=500&filter=${filter}&sort=date`,
-          { headers: { Authorization: `Bearer ${auth.token}` } }
-        )
-        setCatTrend(categorySpendingTrend(res.data.items || [], 5))
+        const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${filter}&sort=date`, {
+          Authorization: `Bearer ${auth.token}`,
+        })
+        setCatTrend(categorySpendingTrend(items, 5))
       } catch {
         /* best-effort */
       }
@@ -56,15 +55,10 @@ export function Reports() {
         filter = `(date>='${yearStart}'&&date<'${yearEndExclusive}')`
       }
 
-      const response = await axios.get(
-        `${apiUrl}/collections/transactions/records?perPage=500&filter=${encodeURIComponent(filter)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
-        }
-      )
-      setTransactions(response.data.items || [])
+      const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${encodeURIComponent(filter)}`, {
+        Authorization: `Bearer ${auth.token}`,
+      })
+      setTransactions(items)
     } catch (err) {
       console.error('Error loading transactions:', err)
     } finally {

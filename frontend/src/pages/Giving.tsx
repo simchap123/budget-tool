@@ -5,6 +5,7 @@ import { useToast } from '../components/ui/Toast'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { computeGiving, GivingSummary } from '../utils/givingCalc'
 import { monthLabel } from '../utils/dateRange'
+import { fetchAllRecords } from '../utils/fetchAll'
 
 export function Giving() {
   const toast = useToast()
@@ -28,11 +29,11 @@ export function Giving() {
     try {
       setLoading(true)
       const uid = auth().record?.id
-      const [cfgRes, txRes] = await Promise.all([
+      const [cfgRes, allTxns] = await Promise.all([
         axios
           .get(`${apiUrl}/collections/giving/records?filter=${encodeURIComponent(`(userId='${uid}')`)}`, { headers: headers() })
           .catch(() => ({ data: { items: [] } })),
-        axios.get(`${apiUrl}/collections/transactions/records?perPage=500&sort=-date`, { headers: headers() }),
+        fetchAllRecords(apiUrl, 'transactions', 'sort=-date', headers()),
       ])
       const cfg = (cfgRes.data.items || [])[0]
       if (cfg) {
@@ -41,7 +42,7 @@ export function Giving() {
         setCategory(cfg.category || '')
         setIncomeCategory(cfg.incomeCategory || '')
       }
-      setTxns(txRes.data.items || [])
+      setTxns(allTxns)
     } catch (e) {
       console.error('Error loading giving:', e)
       toast.error('Failed to load giving data')
