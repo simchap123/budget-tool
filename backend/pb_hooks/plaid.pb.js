@@ -300,8 +300,18 @@ routerAdd("POST", "/api/plaid/webhook", (c) => {
         (body.public_tokens || []).forEach((pt) => {
           try {
             const ex = plaidCall("/item/public_token/exchange", { public_token: pt });
+            // Resolve the institution name (e.g. "Chase") for the UI.
+            let instName = "";
+            try {
+              const ig = plaidCall("/item/get", { access_token: ex.access_token });
+              const instId = ig.item && ig.item.institution_id;
+              if (instId) {
+                const inst = plaidCall("/institutions/get_by_id", { institution_id: instId, country_codes: ["US"] });
+                instName = (inst.institution && inst.institution.name) || "";
+              }
+            } catch (e) { /* name is best-effort */ }
             const item = new Record(itemsCol, {
-              userId: userId, accessToken: ex.access_token, itemId: ex.item_id, institution: "", cursor: "",
+              userId: userId, accessToken: ex.access_token, itemId: ex.item_id, institution: instName, cursor: "",
             });
             dao.saveRecord(item);
             syncItem(item, userId);
