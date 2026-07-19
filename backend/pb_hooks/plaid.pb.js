@@ -135,7 +135,7 @@ routerAdd("POST", "/api/plaid/create-hosted-link", (c) => {
       products: ["transactions"],
       country_codes: ["US"],
       language: "en",
-      webhook: base + "/api/plaid/webhook",
+      webhook: base + "/api/plaid/webhook" + (($os.getenv("PLAID_WEBHOOK_SECRET") || "") ? "?key=" + $os.getenv("PLAID_WEBHOOK_SECRET") : ""),
       hosted_link: { completion_redirect_uri: base + "/?plaid=done" },
     });
     // Map link_token -> user so the completion webhook knows who connected.
@@ -156,6 +156,17 @@ routerAdd("POST", "/api/plaid/create-hosted-link", (c) => {
 // item(s) for the mapped user, and do the initial transaction sync.
 routerAdd("POST", "/api/plaid/webhook", (c) => {
   try {
+    // Authenticate the caller. Plaid signs webhooks with an ES256 JWT
+    // (Plaid-Verification header), but ECDSA/JWK verification isn't practical in
+    // the PocketBase JSVM, so we require a secret in the webhook URL that only
+    // our backend configures on the link token. Combined with the plaid_pending
+    // mapping guard below, this blocks forged webhooks.
+    const expected = $os.getenv("PLAID_WEBHOOK_SECRET") || "";
+    const provided = ($apis.requestInfo(c).query || {}).key || "";
+    if (expected && provided !== expected) {
+      return c.json(401, { error: "unauthorized" });
+    }
+
     const { plaidCall, mapTxn } = require(`${__hooks}/plaid_lib.js`);
     const body = $apis.requestInfo(c).data || {};
     if (body.webhook_type === "LINK" && body.webhook_code === "SESSION_FINISHED" && body.status === "SUCCESS") {
