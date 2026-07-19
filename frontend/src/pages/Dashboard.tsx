@@ -4,7 +4,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { CSVImport } from '../components/CSVImport'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { UpcomingBills } from '../components/UpcomingBills'
-import { ReconnectBanner } from '../components/ReconnectBanner'
+import { BankConnections } from '../components/BankConnections'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
@@ -226,8 +226,8 @@ export function Dashboard({ user }: { user: any }) {
         <p className="mt-2 text-ink-400">Welcome back, {user.name || user.email}</p>
       </div>
 
-      {/* Prompt to re-auth any bank connection that Plaid flagged */}
-      <ReconnectBanner />
+      {/* Connected banks: reconnect if flagged, or disconnect */}
+      <BankConnections />
 
       {/* Month Selector */}
       <div className="mt-6 flex items-center gap-2">

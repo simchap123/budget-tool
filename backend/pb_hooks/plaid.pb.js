@@ -133,19 +133,40 @@ routerAdd("POST", "/api/plaid/sync", (c) => {
   }
 }, $apis.requireRecordAuth());
 
-// GET /api/plaid/status -> { connected, needsReauth: [{ itemId, institution }] }
+// GET /api/plaid/status -> { connected, items: [{ itemId, institution, needsReauth }] }
 routerAdd("GET", "/api/plaid/status", (c) => {
   try {
     const user = $apis.requestInfo(c).authRecord;
-    const items = $app.dao().findRecordsByFilter(
+    const records = $app.dao().findRecordsByFilter(
       "plaid_items", "userId = {:uid}", "-created", 100, 0, { uid: user.id }
     );
-    const reauth = items
-      .filter((i) => i.get("needsReauth"))
-      .map((i) => ({ itemId: i.get("itemId"), institution: i.get("institution") }));
-    return c.json(200, { connected: items.length > 0, needsReauth: reauth });
+    const items = records.map((i) => ({
+      itemId: i.get("itemId"),
+      institution: i.get("institution"),
+      needsReauth: !!i.get("needsReauth"),
+    }));
+    return c.json(200, { connected: items.length > 0, items: items });
   } catch (err) {
-    return c.json(200, { connected: false, needsReauth: [] });
+    return c.json(200, { connected: false, items: [] });
+  }
+}, $apis.requireRecordAuth());
+
+// POST /api/plaid/disconnect { item_id } -> removes the item at Plaid + locally.
+routerAdd("POST", "/api/plaid/disconnect", (c) => {
+  try {
+    const { plaidCall } = require(`${__hooks}/plaid_lib.js`);
+    const info = $apis.requestInfo(c);
+    const user = info.authRecord;
+    const dao = $app.dao();
+    const item = dao.findFirstRecordByFilter(
+      "plaid_items", "itemId = {:id} && userId = {:u}", { id: info.data.item_id, u: user.id }
+    );
+    // Invalidate the access token at Plaid (best-effort — remove locally regardless).
+    try { plaidCall("/item/remove", { access_token: item.get("accessToken") }); } catch (e) { /* already gone */ }
+    dao.deleteRecord(item);
+    return c.json(200, { removed: true });
+  } catch (err) {
+    return c.json(400, { error: String((err && err.message) || err) });
   }
 }, $apis.requireRecordAuth());
 
