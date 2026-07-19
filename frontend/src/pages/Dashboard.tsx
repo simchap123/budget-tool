@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Pencil, Trash2 } from 'lucide-react'
 import { CSVImport } from '../components/CSVImport'
+import { PlaidConnect } from '../components/PlaidConnect'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
@@ -212,13 +213,14 @@ export function Dashboard({ user }: { user: any }) {
       <div className="mt-12">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-display-sm">Transactions</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFormOpen(!formOpen)}
               className="btn-primary py-2 px-4"
             >
               {formOpen ? 'Cancel' : '+ Add Transaction'}
             </button>
+            <PlaidConnect onSynced={fetchTransactions} />
             <button
               onClick={() => setImportOpen(!importOpen)}
               className="btn-secondary py-2 px-4"
