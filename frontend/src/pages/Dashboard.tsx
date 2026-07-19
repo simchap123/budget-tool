@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Landmark } from 'lucide-react'
 import { CSVImport } from '../components/CSVImport'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { UpcomingBills } from '../components/UpcomingBills'
@@ -432,7 +432,14 @@ export function Dashboard({ user }: { user: any }) {
                       {formatDate(txn.date)}
                     </td>
                     <td className="text-ink-300">
-                      {txn.description}
+                      <span className="inline-flex items-center gap-1.5">
+                        {txn.description}
+                        {txn.plaidId && (
+                          <span title="Synced from your bank" className="inline-flex shrink-0">
+                            <Landmark size={13} className="text-accent-breeze" aria-label="Synced from your bank" />
+                          </span>
+                        )}
+                      </span>
                       {txn.note && (
                         <span className="block text-body-sm text-ink-500 italic">{txn.note}</span>
                       )}
