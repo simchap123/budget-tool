@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Landmark } from 'lucide-react'
+import { Landmark, AlertTriangle } from 'lucide-react'
 import { useToast } from './ui/Toast'
 
 // Uses Plaid Hosted Link: "Connect Bank" redirects to a Plaid-hosted page that
@@ -10,6 +10,7 @@ import { useToast } from './ui/Toast'
 export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
   const toast = useToast()
   const [loading, setLoading] = useState(false)
+  const [chaseDegraded, setChaseDegraded] = useState(false)
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const headers = () => {
@@ -23,6 +24,12 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
       window.history.replaceState({}, '', window.location.pathname)
       pollSync()
     }
+    // Surface Chase's live login health so a Chase-side outage reads as such,
+    // not as a broken app (Chase's OAuth 500s when its status is DEGRADED).
+    axios
+      .get(`${apiUrl}/plaid/bank-status`, { headers: headers() })
+      .then((r) => setChaseDegraded(!!r.data.degraded))
+      .catch(() => {})
   }, [])
 
   const countTransactions = async (): Promise<number> => {
@@ -87,12 +94,20 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
   }
 
   return (
-    <button
-      onClick={connect}
-      disabled={loading}
-      className="btn-secondary py-2 px-4 inline-flex items-center gap-2 disabled:opacity-50"
-    >
-      <Landmark size={16} /> {loading ? 'Connecting…' : 'Connect Bank'}
-    </button>
+    <div className="inline-flex flex-col items-start gap-1">
+      <button
+        onClick={connect}
+        disabled={loading}
+        className="btn-secondary py-2 px-4 inline-flex items-center gap-2 disabled:opacity-50"
+      >
+        <Landmark size={16} /> {loading ? 'Connecting…' : 'Connect Bank'}
+      </button>
+      {chaseDegraded && (
+        <span className="inline-flex items-center gap-1 text-body-sm text-yellow-400 max-w-xs">
+          <AlertTriangle size={13} className="shrink-0" />
+          Chase logins are temporarily degraded (Plaid status) — connecting may fail; try again later.
+        </span>
+      )}
+    </div>
   )
 }

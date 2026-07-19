@@ -157,6 +157,33 @@ routerAdd("GET", "/api/plaid/status", (c) => {
   }
 }, $apis.requireRecordAuth());
 
+// GET /api/plaid/bank-status?institution_id=ins_56 -> live login health for a bank.
+// Chase's `item_logins` status flips to DEGRADED/DOWN during their frequent OAuth
+// outages, which surface as a 500 on Chase's authorize page — this lets the UI say
+// "Chase is temporarily degraded" instead of showing a confusing failure.
+routerAdd("GET", "/api/plaid/bank-status", (c) => {
+  try {
+    const { plaidCall } = require(`${__hooks}/plaid_lib.js`);
+    const instId = (($apis.requestInfo(c).query) || {}).institution_id || "ins_56";
+    const data = plaidCall("/institutions/get_by_id", {
+      institution_id: instId,
+      country_codes: ["US"],
+      options: { include_status: true },
+    });
+    const inst = data.institution || {};
+    const st = (inst.status && inst.status.item_logins) || {};
+    const status = st.status || "UNKNOWN";
+    return c.json(200, {
+      name: inst.name || "",
+      status: status,
+      degraded: status === "DEGRADED" || status === "DOWN",
+      since: st.last_status_change || "",
+    });
+  } catch (err) {
+    return c.json(200, { status: "UNKNOWN", degraded: false });
+  }
+}, $apis.requireRecordAuth());
+
 // POST /api/plaid/disconnect { item_id } -> removes the item at Plaid + locally.
 routerAdd("POST", "/api/plaid/disconnect", (c) => {
   try {
