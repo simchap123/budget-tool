@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { BulkRecategorize } from '../components/BulkRecategorize'
+import { fetchAllRecords } from '../utils/fetchAll'
 
 interface Category {
   id: string
@@ -22,10 +23,27 @@ export function Categories() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [usedCategories, setUsedCategories] = useState<string[]>([])
 
   useEffect(() => {
     fetchCategories()
+    fetchUsedCategories()
   }, [])
+
+  // Categories in actual use live as strings on transactions (many users never
+  // create category records), so derive the real list from transactions too.
+  const fetchUsedCategories = async () => {
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const items = await fetchAllRecords(apiUrl, 'transactions', 'fields=category', {
+        Authorization: `Bearer ${auth.token}`,
+      })
+      setUsedCategories(Array.from(new Set(items.map((t: any) => t.category).filter(Boolean))).sort())
+    } catch {
+      /* best-effort — datalist just won't autocomplete */
+    }
+  }
 
   const fetchCategories = async () => {
     try {
@@ -141,7 +159,10 @@ export function Categories() {
 
       {/* Bulk recategorize — clean up big buckets like "Random" across all history */}
       <div className="mt-6">
-        <BulkRecategorize categories={categories.map((c) => c.name)} onDone={() => {}} />
+        <BulkRecategorize
+          categories={Array.from(new Set([...categories.map((c) => c.name), ...usedCategories])).sort()}
+          onDone={fetchUsedCategories}
+        />
       </div>
 
       {/* Form */}
