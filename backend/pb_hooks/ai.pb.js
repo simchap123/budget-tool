@@ -12,19 +12,7 @@
 
 routerAdd("POST", "/api/ai/suggest-category", (c) => {
   try {
-    var NOISE = {
-      POS: 1, DEBIT: 1, CREDIT: 1, PAYMENT: 1, PURCHASE: 1, ONLINE: 1, CARD: 1,
-      ZELLE: 1, ACH: 1, WITHDRAWAL: 1, DEPOSIT: 1, TRANSFER: 1, RECURRING: 1,
-      AUTOPAY: 1, PPD: 1, INDN: 1, REF: 1, WEB: 1, LLC: 1, INC: 1, PMT: 1, BILL: 1,
-    };
-    var merchantTokens = function (desc) {
-      return String(desc)
-        .toUpperCase()
-        .replace(/[^A-Z0-9 ]/g, " ")
-        .split(/\s+/)
-        .filter(function (w) { return w.length >= 4 && !NOISE[w] && !/^\d+$/.test(w); })
-        .sort(function (a, b) { return b.length - a.length; });
-    };
+    const { merchantTokens } = require(`${__hooks}/ai_lib.js`);
 
     const info = $apis.requestInfo(c);
     const user = info.authRecord;
