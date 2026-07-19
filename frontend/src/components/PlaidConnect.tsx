@@ -25,26 +25,37 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
     }
   }, [])
 
-  // The webhook creates the item + does the first sync; poll a few times in case
-  // the redirect beats the webhook, then refresh the dashboard.
+  const countTransactions = async (): Promise<number> => {
+    try {
+      const r = await axios.get(`${apiUrl}/collections/transactions/records?perPage=1`, { headers: headers() })
+      return r.data.totalItems ?? 0
+    } catch {
+      return -1
+    }
+  }
+
+  // The webhook creates the item and syncs server-side. Big histories (e.g. Chase)
+  // arrive asynchronously via SYNC_UPDATES_AVAILABLE, often after the redirect —
+  // so nudge a sync early, then watch the transaction count grow for ~90s (cheap
+  // local checks, not repeated Plaid calls) and refresh the moment they land.
   const pollSync = async () => {
     setLoading(true)
-    toast.success('Finishing bank connection — syncing…')
-    for (let i = 0; i < 8; i++) {
-      try {
-        const res = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
-        if (res.data.added > 0) {
-          toast.success(`Synced ${res.data.added} transactions`)
-          onSynced()
-          setLoading(false)
-          return
-        }
-      } catch {
-        /* keep polling */
+    toast.success('Finishing bank connection — importing transactions…')
+    const baseline = await countTransactions()
+    for (let i = 0; i < 18; i++) {
+      if (i < 5) {
+        try { await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() }) } catch { /* webhook may still be running */ }
       }
-      await new Promise((r) => setTimeout(r, 3000))
+      const now = await countTransactions()
+      if (baseline >= 0 && now > baseline) {
+        toast.success(`Imported ${now - baseline} transactions`)
+        onSynced()
+        setLoading(false)
+        return
+      }
+      await new Promise((r) => setTimeout(r, 5000))
     }
-    toast.info('Bank connected. Transactions will appear shortly — refresh if needed.')
+    toast.info('Bank connected. Your transactions are still importing and will appear shortly.')
     onSynced()
     setLoading(false)
   }
