@@ -7,6 +7,7 @@ import { Signup } from './pages/Signup'
 import { Budget } from './pages/Budget'
 import { Categories } from './pages/Categories'
 import { Analytics } from './pages/Analytics'
+import { Recurring } from './pages/Recurring'
 import { Header } from './components/Header'
 import { ToastProvider } from './components/ui/Toast'
 import { initAnalytics, trackPageView } from './utils/analytics'
@@ -94,6 +95,9 @@ export default function App() {
         )}
         {currentPage === 'analytics' && user && (
           <Analytics />
+        )}
+        {currentPage === 'recurring' && user && (
+          <Recurring />
         )}
         {currentPage === 'dashboard' && !user && (
           <Home onNavigate={setCurrentPage} />

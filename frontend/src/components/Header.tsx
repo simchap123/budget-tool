@@ -76,6 +76,16 @@ export function Header({
                   Analytics
                 </button>
                 <button
+                  onClick={() => handleNavClick('recurring')}
+                  className={`text-body-md font-normal transition-colors ${
+                    currentPage === 'recurring'
+                      ? 'text-accent-sunset'
+                      : 'text-ink-400 hover:text-ink-200'
+                  }`}
+                >
+                  Recurring
+                </button>
+                <button
                   onClick={() => handleNavClick('categories')}
                   className="p-1 text-ink-400 hover:text-ink-200 transition-colors"
                   title="Categories"
@@ -163,6 +173,16 @@ export function Header({
                     }`}
                   >
                     Analytics
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('recurring')}
+                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'recurring'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Recurring
                   </button>
                   <button
                     onClick={() => handleNavClick('categories')}
