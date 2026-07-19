@@ -42,17 +42,24 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
     reader.onload = (event) => {
       const csv = event.target?.result as string
       const rows = csv.split('\n').filter(row => row.trim())
+      if (rows.length < 2) { setPreview([]); return }
       const headers = parseCSVLine(rows[0]).map(h => h.trim())
+      const parsedRows = rows.slice(1).map(r => parseCSVLine(r).map(v => v.trim()))
+      const signed = hasSignedAmounts(headers, parsedRows)
 
-      const data = rows.slice(1).map(row => {
-        const values = parseCSVLine(row).map(v => v.trim())
-        return headers.reduce((obj, header, idx) => {
-          obj[header.toLowerCase()] = values[idx]
-          return obj
-        }, {} as any)
-      })
-
-      setPreview(data.slice(0, 5))
+      // Show what will actually be imported (parsed), so signed/Chase amounts and
+      // income-vs-expense direction can be sanity-checked before committing.
+      const preview = parsedRows
+        .slice(0, 5)
+        .map(vals => csvRowToTransaction(headers, vals, '', signed))
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+        .map(t => ({
+          Date: String(t.date).slice(0, 10),
+          Description: t.description,
+          Amount: `${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}`,
+          Type: t.type,
+        }))
+      setPreview(preview)
     }
 
     reader.readAsText(selectedFile)
@@ -163,7 +170,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
 
         {preview.length > 0 && (
           <div>
-            <p className="text-body-sm text-ink-300 mb-2">Preview (first 5 rows):</p>
+            <p className="text-body-sm text-ink-300 mb-2">Preview — what will be imported (first 5):</p>
             <div className="overflow-x-auto rounded-sm border border-ink-700 bg-canvas-card">
               <table className="table-minimal w-full">
                 <thead>
