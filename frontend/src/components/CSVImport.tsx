@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { trackImport } from '../utils/analytics'
-import { normalizeDate } from '../utils/dateRange'
 import { parseCSVLine } from '../utils/csv'
+import { csvRowToTransaction } from '../utils/csvImport'
 
 // Retry POSTs that hit API rate limiting (429/503) with linear backoff, so a
 // large import (e.g. 1,500-row Chase export) doesn't silently drop rows.
@@ -80,35 +80,15 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
       for (let i = 1; i < rows.length; i++) {
         try {
           const values = parseCSVLine(rows[i]).map(v => v.trim())
-          const data = headers.reduce((obj, header, idx) => {
-            obj[header.toLowerCase()] = values[idx]
-            return obj
-          }, {} as any)
-
-          // Map common CSV column names
-          const date = data.date || data.Date || new Date().toISOString()
-          const description = data.description || data.Description || data.memo || data.Memo || ''
-          const amount = parseFloat(data.amount || data.Amount || '0')
-          const type = (data.type || data.Type || 'expense').toLowerCase()
-          const category = data.category || data.Category || 'Uncategorized'
-          const note = data.note || data.Note || ''
-
-          if (!description || amount === 0) {
+          const txn = csvRowToTransaction(headers, values, auth.record.id)
+          if (!txn) {
             failed++
             continue
           }
 
           await postWithRetry(
             `${apiUrl}/collections/transactions/records`,
-            {
-              amount: Math.abs(amount),
-              description,
-              type: type === 'income' || type === 'in' ? 'income' : 'expense',
-              category,
-              note,
-              userId: auth.record.id,
-              date: normalizeDate(date),
-            },
+            txn,
             {
               headers: {
                 Authorization: `Bearer ${auth.token}`,
