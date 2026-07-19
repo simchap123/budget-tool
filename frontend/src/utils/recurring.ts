@@ -20,16 +20,19 @@ export interface RecurringItem {
 
 const DAY_MS = 86400000
 
-// Average days between consecutive (sorted) dates.
-function avgInterval(sortedDates: string[]): number {
+// Median days between consecutive (sorted, de-duped) dates. Median is robust to
+// bills that post as two nearby charges (which would skew a mean interval).
+function medianInterval(sortedDates: string[]): number {
   if (sortedDates.length < 2) return 30
-  let total = 0
+  const gaps: number[] = []
   for (let i = 1; i < sortedDates.length; i++) {
     const a = new Date(sortedDates[i - 1] + 'T00:00:00Z').getTime()
     const b = new Date(sortedDates[i] + 'T00:00:00Z').getTime()
-    total += (b - a) / DAY_MS
+    gaps.push((b - a) / DAY_MS)
   }
-  return total / (sortedDates.length - 1)
+  gaps.sort((x, y) => x - y)
+  const mid = Math.floor(gaps.length / 2)
+  return gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2
 }
 
 // Detect recurring expenses (subscriptions / bills): same merchant, consistent
@@ -52,17 +55,18 @@ export function detectRecurring(txns: RawTxn[]): RecurringItem[] {
   const items: RecurringItem[] = []
   for (const key of Object.keys(groups)) {
     const g = groups[key]
-    if (g.amounts.length < 2) continue // needs repetition
-    const months = new Set(g.dates.map((d) => d.slice(0, 7)))
+    // De-dupe to distinct billing days so split/same-day charges count once.
+    const uniqueDates = Array.from(new Set(g.dates)).sort()
+    if (uniqueDates.length < 2) continue // needs to recur on >= 2 distinct days
+    const months = new Set(uniqueDates.map((d) => d.slice(0, 7)))
     if (months.size < 2) continue // must span >= 2 months (not a one-off burst)
     const min = Math.min(...g.amounts)
     const max = Math.max(...g.amounts)
     if (min <= 0 || max / min > 1.6) continue // amounts must be consistent
 
     const avg = g.amounts.reduce((a, b) => a + b, 0) / g.amounts.length
-    const sortedDates = g.dates.slice().sort()
-    const lastDate = sortedDates[sortedDates.length - 1]
-    const interval = avgInterval(sortedDates)
+    const lastDate = uniqueDates[uniqueDates.length - 1]
+    const interval = medianInterval(uniqueDates)
     const nextDate = new Date(new Date(lastDate + 'T00:00:00Z').getTime() + interval * DAY_MS)
       .toISOString()
       .slice(0, 10)
@@ -72,7 +76,7 @@ export function detectRecurring(txns: RawTxn[]): RecurringItem[] {
     items.push({
       key,
       label: g.sample.trim().replace(/\s+/g, ' ').slice(0, 44),
-      count: g.amounts.length,
+      count: uniqueDates.length,
       avgAmount: avg,
       lastDate,
       avgIntervalDays: Math.round(interval),

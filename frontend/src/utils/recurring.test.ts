@@ -64,6 +64,19 @@ describe('detectRecurring', () => {
     expect(items).toHaveLength(0)
   })
 
+  it('de-dupes same-day charges so cadence/count are not inflated', () => {
+    const items = detectRecurring([
+      t('GYM MEMBERSHIP', 30, '2026-06-01'),
+      t('GYM MEMBERSHIP', 30, '2026-06-01'), // same-day split charge
+      t('GYM MEMBERSHIP', 30, '2026-07-01'),
+      t('GYM MEMBERSHIP', 30, '2026-07-01'),
+    ])
+    expect(items).toHaveLength(1)
+    expect(items[0].count).toBe(2) // 2 distinct billing days, not 4
+    expect(items[0].avgIntervalDays).toBeGreaterThanOrEqual(29)
+    expect(items[0].avgIntervalDays).toBeLessThanOrEqual(31)
+  })
+
   it('ignores income', () => {
     const items = detectRecurring([
       { description: 'PAYROLL DEP', amount: 2800, type: 'income', date: '2026-06-01' },
