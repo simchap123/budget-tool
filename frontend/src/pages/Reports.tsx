@@ -3,6 +3,7 @@ import axios from 'axios'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Percent, ChevronLeft, ChevronRight } from 'lucide-react'
 import { monthRange, monthLabel, shiftMonth } from '../utils/dateRange'
+import { categorySpendingTrend, TrendPoint } from '../utils/categoryTrend'
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -10,10 +11,33 @@ export function Reports() {
   const [filterType, setFilterType] = useState<'month' | 'year'>('month')
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7))
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+  const [catTrend, setCatTrend] = useState<{ data: TrendPoint[]; categories: string[] }>({ data: [], categories: [] })
 
   useEffect(() => {
     fetchTransactions()
   }, [filterType, currentMonth, currentYear])
+
+  // Independent of the month/year filter: 6-month category spending trend.
+  useEffect(() => {
+    const loadTrend = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+        const apiUrl = import.meta.env.VITE_API_URL || '/api'
+        const since = new Date()
+        since.setMonth(since.getMonth() - 5)
+        const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-01`
+        const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
+        const res = await axios.get(
+          `${apiUrl}/collections/transactions/records?perPage=500&filter=${filter}&sort=date`,
+          { headers: { Authorization: `Bearer ${auth.token}` } }
+        )
+        setCatTrend(categorySpendingTrend(res.data.items || [], 5))
+      } catch {
+        /* best-effort */
+      }
+    }
+    loadTrend()
+  }, [])
 
   const fetchTransactions = async () => {
     try {
@@ -299,6 +323,28 @@ export function Reports() {
               </ResponsiveContainer>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Category spending trend (last 6 months, independent of the filter) */}
+      {catTrend.data.length > 1 && catTrend.categories.length > 0 && (
+        <div className="mt-12 card p-6">
+          <h3 className="text-lg font-normal text-ink-50 mb-4">Spending by category · last 6 months</h3>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={catTrend.data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f3f" />
+              <XAxis dataKey="month" stroke="#888" style={{ fontSize: '12px' }} />
+              <YAxis stroke="#888" style={{ fontSize: '12px' }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }}
+                labelStyle={{ color: '#d4d4d4' }}
+              />
+              <Legend />
+              {catTrend.categories.map((cat, i) => (
+                <Bar key={cat} dataKey={cat} stackId="spend" fill={COLORS[i % COLORS.length]} radius={i === catTrend.categories.length - 1 ? [4, 4, 0, 0] : undefined} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 
