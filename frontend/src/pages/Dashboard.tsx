@@ -447,7 +447,7 @@ export function Dashboard({ user }: { user: any }) {
                     <td className="text-ink-400">{txn.category || 'Uncategorized'}</td>
                     <td className="text-right">
                       <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
-                        {txn.type === 'income' ? '+' : '-'}${txn.amount.toFixed(2)}
+                        {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toFixed(2)}
                       </span>
                     </td>
                     <td className="text-right space-x-1 sm:space-x-2 flex flex-col sm:flex-row justify-end gap-1 sm:gap-2">
