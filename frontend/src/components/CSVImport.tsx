@@ -4,6 +4,24 @@ import { trackImport } from '../utils/analytics'
 import { normalizeDate } from '../utils/dateRange'
 import { parseCSVLine } from '../utils/csv'
 
+// Retry POSTs that hit API rate limiting (429/503) with linear backoff, so a
+// large import (e.g. 1,500-row Chase export) doesn't silently drop rows.
+async function postWithRetry(url: string, body: any, config: any, retries = 5): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await axios.post(url, body, config)
+      return
+    } catch (e: any) {
+      const status = e?.response?.status
+      if ((status === 429 || status === 503) && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
+        continue
+      }
+      throw e
+    }
+  }
+}
+
 export function CSVImport({ onImportComplete }: { onImportComplete: () => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<any[]>([])
@@ -79,7 +97,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
             continue
           }
 
-          await axios.post(
+          await postWithRetry(
             `${apiUrl}/collections/transactions/records`,
             {
               amount: Math.abs(amount),
