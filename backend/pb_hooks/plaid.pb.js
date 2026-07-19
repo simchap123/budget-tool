@@ -120,3 +120,79 @@ routerAdd("POST", "/api/plaid/sync", (c) => {
     return c.json(400, { error: String((err && err.message) || err) });
   }
 }, $apis.requireRecordAuth());
+
+// POST /api/plaid/create-hosted-link -> { hosted_link_url }
+// Plaid hosts the whole flow at a URL (no embedded JS / cache issues). The
+// public_token comes back via the webhook below.
+routerAdd("POST", "/api/plaid/create-hosted-link", (c) => {
+  try {
+    const { plaidCall } = require(`${__hooks}/plaid_lib.js`);
+    const user = $apis.requestInfo(c).authRecord;
+    const base = $os.getenv("PLAID_REDIRECT_URI") || "https://budget.grotketech.com";
+    const data = plaidCall("/link/token/create", {
+      user: { client_user_id: user.id },
+      client_name: "Budget Tool",
+      products: ["transactions"],
+      country_codes: ["US"],
+      language: "en",
+      webhook: base + "/api/plaid/webhook",
+      hosted_link: { completion_redirect_uri: base + "/?plaid=done" },
+    });
+    // Map link_token -> user so the completion webhook knows who connected.
+    const dao = $app.dao();
+    const rec = new Record(dao.findCollectionByNameOrId("plaid_pending"), {
+      linkToken: data.link_token,
+      userId: user.id,
+    });
+    dao.saveRecord(rec);
+    return c.json(200, { hosted_link_url: data.hosted_link_url, link_token: data.link_token });
+  } catch (err) {
+    return c.json(400, { error: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());
+
+// POST /api/plaid/webhook  (PUBLIC — Plaid calls this)
+// On a completed Hosted Link session, exchange the public token(s), store the
+// item(s) for the mapped user, and do the initial transaction sync.
+routerAdd("POST", "/api/plaid/webhook", (c) => {
+  try {
+    const { plaidCall, mapTxn } = require(`${__hooks}/plaid_lib.js`);
+    const body = $apis.requestInfo(c).data || {};
+    if (body.webhook_type === "LINK" && body.webhook_code === "SESSION_FINISHED" && body.status === "SUCCESS") {
+      const dao = $app.dao();
+      let userId = "";
+      try {
+        const pend = dao.findFirstRecordByFilter("plaid_pending", "linkToken = {:lt}", { lt: body.link_token });
+        userId = pend.get("userId");
+      } catch (e) { /* unknown session */ }
+
+      if (userId) {
+        const itemsCol = dao.findCollectionByNameOrId("plaid_items");
+        const txCol = dao.findCollectionByNameOrId("transactions");
+        (body.public_tokens || []).forEach((pt) => {
+          try {
+            const ex = plaidCall("/item/public_token/exchange", { public_token: pt });
+            const item = new Record(itemsCol, {
+              userId: userId, accessToken: ex.access_token, itemId: ex.item_id, institution: "", cursor: "",
+            });
+            dao.saveRecord(item);
+            let cursor = "", hasMore = true;
+            while (hasMore) {
+              const payload = { access_token: ex.access_token, count: 250 };
+              if (cursor) payload.cursor = cursor;
+              const page = plaidCall("/transactions/sync", payload);
+              (page.added || []).forEach((t) => dao.saveRecord(new Record(txCol, mapTxn(t, userId))));
+              cursor = page.next_cursor;
+              hasMore = page.has_more;
+            }
+            item.set("cursor", cursor);
+            dao.saveRecord(item);
+          } catch (e) { /* skip a bad token */ }
+        });
+      }
+    }
+    return c.json(200, { received: true });
+  } catch (err) {
+    return c.json(200, { received: true });
+  }
+});
