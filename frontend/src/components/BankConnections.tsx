@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { AlertTriangle, Landmark, Trash2 } from 'lucide-react'
+import { AlertTriangle, Landmark, RefreshCw, Trash2 } from 'lucide-react'
 import { useToast } from './ui/Toast'
 
 interface BankItem {
@@ -9,10 +9,11 @@ interface BankItem {
   needsReauth: boolean
 }
 
-// Lists the user's linked banks with reconnect (if flagged) and disconnect.
-// Renders nothing when no bank is connected.
-export function BankConnections() {
+// Lists the user's linked banks with a manual sync, reconnect (if flagged), and
+// disconnect. Renders nothing when no bank is connected.
+export function BankConnections({ onSynced }: { onSynced?: () => void }) {
   const [items, setItems] = useState<BankItem[]>([])
+  const [syncing, setSyncing] = useState(false)
   const toast = useToast()
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
@@ -30,6 +31,21 @@ export function BankConnections() {
   useEffect(() => {
     load()
   }, [])
+
+  const sync = async () => {
+    setSyncing(true)
+    try {
+      const { data } = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
+      const added = data.added || 0
+      toast.success(added > 0 ? `Synced ${added} new transaction${added === 1 ? '' : 's'}` : 'Already up to date')
+      load() // refresh any reconnect flags
+      onSynced?.()
+    } catch (e: any) {
+      toast.error('Sync failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const reconnect = async (itemId: string) => {
     try {
@@ -56,7 +72,17 @@ export function BankConnections() {
 
   return (
     <div className="mt-6 card p-4">
-      <h3 className="text-body-sm text-ink-400 mb-3">Connected banks</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-body-sm text-ink-400">Connected banks</h3>
+        <button
+          onClick={sync}
+          disabled={syncing}
+          className="inline-flex items-center gap-1.5 text-body-sm text-accent-breeze hover:text-ink-200 disabled:opacity-50 transition-colors"
+        >
+          <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+          {syncing ? 'Syncing…' : 'Sync now'}
+        </button>
+      </div>
       <div className="space-y-2">
         {items.map((it) => (
           <div key={it.itemId} className="flex items-center justify-between gap-3">

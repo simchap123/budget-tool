@@ -214,7 +214,7 @@ export function Dashboard({ user }: { user: any }) {
       </div>
 
       {/* Connected banks: reconnect if flagged, or disconnect */}
-      <BankConnections />
+      <BankConnections onSynced={fetchTransactions} />
 
       {/* Month Selector */}
       <div className="mt-6 flex items-center gap-2">
