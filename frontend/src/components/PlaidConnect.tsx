@@ -1,16 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { Landmark, AlertTriangle } from 'lucide-react'
+import { usePlaidLink } from 'react-plaid-link'
 import { useToast } from './ui/Toast'
 
-// Uses Plaid Hosted Link: "Connect Bank" redirects to a Plaid-hosted page that
-// handles the whole flow (including Chase OAuth) with no embedded JS or cache
-// issues. Plaid delivers the result via webhook (backend exchanges + syncs);
-// on return we poll /sync until the new transactions land.
+// Embedded web Plaid Link: opens an in-app popup (no leaving the app), forces the
+// WEB OAuth flow for banks like Chase, and exchanges the token directly in
+// onSuccess (no dependency on a completion webhook). For OAuth banks the whole
+// page redirects to the bank and back to our redirect_uri (?oauth_state_id=...);
+// we resume Link with the stored token + receivedRedirectUri.
+const TOKEN_KEY = 'plaid_link_token'
+
 export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
   const toast = useToast()
+  const [linkToken, setLinkToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [chaseDegraded, setChaseDegraded] = useState(false)
+  const openedRef = useRef(false)
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const headers = () => {
@@ -18,75 +24,68 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
     return { Authorization: `Bearer ${auth.token}` }
   }
 
+  const isOAuthReturn = typeof window !== 'undefined' && /[?&]oauth_state_id=/.test(window.location.search)
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('plaid') === 'done') {
-      window.history.replaceState({}, '', window.location.pathname)
-      pollSync()
+    // Resume Link after a bank OAuth redirect using the token we stored pre-redirect.
+    if (isOAuthReturn) {
+      const saved = localStorage.getItem(TOKEN_KEY)
+      if (saved) setLinkToken(saved)
     }
-    // Surface Chase's live login health so a Chase-side outage reads as such,
-    // not as a broken app (Chase's OAuth 500s when its status is DEGRADED).
-    axios
-      .get(`${apiUrl}/plaid/bank-status`, { headers: headers() })
+    // Surface Chase's live login health (it 500s while its status is DEGRADED).
+    axios.get(`${apiUrl}/plaid/bank-status`, { headers: headers() })
       .then((r) => setChaseDegraded(!!r.data.degraded))
       .catch(() => {})
   }, [])
 
-  const countTransactions = async (): Promise<number> => {
-    try {
-      const r = await axios.get(`${apiUrl}/collections/transactions/records?perPage=1`, { headers: headers() })
-      return r.data.totalItems ?? 0
-    } catch {
-      return -1
-    }
-  }
-
-  // The webhook creates the item and syncs server-side. Big histories (e.g. Chase)
-  // arrive asynchronously via SYNC_UPDATES_AVAILABLE, often after the redirect —
-  // so nudge a sync early, then watch the transaction count grow for ~90s (cheap
-  // local checks, not repeated Plaid calls) and refresh the moment they land.
-  const pollSync = async () => {
+  const finish = useCallback(async (public_token: string, institution?: string) => {
     setLoading(true)
-    toast.success('Finishing bank connection — importing transactions…')
-    const baseline = await countTransactions()
-    for (let i = 0; i < 18; i++) {
-      if (i < 5) {
-        try { await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() }) } catch { /* webhook may still be running */ }
-      }
-      const now = await countTransactions()
-      if (baseline >= 0 && now > baseline) {
-        toast.success(`Imported ${now - baseline} transactions`)
-        onSynced()
-        setLoading(false)
-        return
-      }
-      await new Promise((r) => setTimeout(r, 5000))
-    }
-    // Window elapsed with no new transactions — distinguish "connected but still
-    // importing" from "the connection never completed" so the message is honest.
-    let connected = false
     try {
-      const r = await axios.get(`${apiUrl}/plaid/status`, { headers: headers() })
-      connected = !!r.data.connected
-    } catch { /* treat as unknown/failed below */ }
-    if (connected) {
-      toast.info('Bank connected. Your transactions are still importing and will appear shortly.')
-    } else {
-      toast.error("The bank connection didn't finish. Please try Connect Bank again.")
+      await axios.post(`${apiUrl}/plaid/exchange-public-token`, { public_token, institution: institution || '' }, { headers: headers() })
+      localStorage.removeItem(TOKEN_KEY)
+      window.history.replaceState({}, '', window.location.pathname)
+      toast.success('Bank connected — importing transactions…')
+      try {
+        const { data } = await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() })
+        if (data.added > 0) toast.success(`Imported ${data.added} transactions`)
+      } catch { /* webhook will also sync large histories */ }
+      onSynced()
+    } catch (e: any) {
+      toast.error('Connect failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setLinkToken(null)
+      setLoading(false)
     }
-    onSynced()
-    setLoading(false)
-  }
+  }, [onSynced])
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    receivedRedirectUri: isOAuthReturn ? window.location.href : undefined,
+    onSuccess: (public_token, metadata) => finish(public_token, metadata?.institution?.name),
+    onExit: (err) => {
+      localStorage.removeItem(TOKEN_KEY)
+      setLinkToken(null)
+      setLoading(false)
+      if (err) toast.error("Connection didn't finish: " + (err.display_message || err.error_message || 'cancelled'))
+    },
+  })
+
+  // Open the popup once Link is ready (both a fresh click and an OAuth resume).
+  useEffect(() => {
+    if (linkToken && ready && !openedRef.current) {
+      openedRef.current = true
+      open()
+    }
+  }, [linkToken, ready])
 
   const connect = async () => {
     setLoading(true)
+    openedRef.current = false
     try {
-      const { data } = await axios.post(`${apiUrl}/plaid/create-hosted-link`, {}, { headers: headers() })
-      if (data.hosted_link_url) {
-        window.location.href = data.hosted_link_url
-      } else {
-        throw new Error(data.error || 'Could not start Plaid')
-      }
+      const { data } = await axios.post(`${apiUrl}/plaid/create-link-token`, {}, { headers: headers() })
+      if (!data.link_token) throw new Error(data.error || 'Could not start Plaid')
+      localStorage.setItem(TOKEN_KEY, data.link_token)
+      setLinkToken(data.link_token) // → ready → auto-open
     } catch (e: any) {
       toast.error('Could not start Plaid: ' + (e.response?.data?.error || e.message))
       setLoading(false)

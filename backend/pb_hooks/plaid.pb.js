@@ -16,16 +16,20 @@ routerAdd("POST", "/api/plaid/create-link-token", (c) => {
   try {
     const { plaidCall } = require(`${__hooks}/plaid_lib.js`);
     const user = $apis.requestInfo(c).authRecord;
+    const base = $os.getenv("PLAID_REDIRECT_URI") || "https://budget.grotketech.com";
+    const secret = $os.getenv("PLAID_WEBHOOK_SECRET") || "";
     const payload = {
       user: { client_user_id: user.id },
       client_name: "Budget Tool",
       products: ["transactions"],
       country_codes: ["US"],
       language: "en",
+      // redirect_uri makes OAuth banks (Chase) use the WEB OAuth flow and return
+      // to our SPA (which resumes Link). Must match a dashboard-registered URI.
+      redirect_uri: base,
+      // Ongoing item webhooks (SYNC_UPDATES_AVAILABLE, ITEM_LOGIN_REQUIRED).
+      webhook: base + "/api/plaid/webhook" + (secret ? "?key=" + secret : ""),
     };
-    // Required for OAuth institutions (Chase, etc.) in production.
-    const redirect = $os.getenv("PLAID_REDIRECT_URI");
-    if (redirect) payload.redirect_uri = redirect;
     const data = plaidCall("/link/token/create", payload);
     return c.json(200, { link_token: data.link_token });
   } catch (err) {
@@ -44,17 +48,31 @@ routerAdd("POST", "/api/plaid/exchange-public-token", (c) => {
 
     const ex = plaidCall("/item/public_token/exchange", { public_token: publicToken });
 
+    // Institution name: prefer what Link sent, else resolve it (e.g. "Chase").
+    let instName = info.data.institution || "";
+    if (!instName) {
+      try {
+        const ig = plaidCall("/item/get", { access_token: ex.access_token });
+        const instId = ig.item && ig.item.institution_id;
+        if (instId) {
+          const inst = plaidCall("/institutions/get_by_id", { institution_id: instId, country_codes: ["US"] });
+          instName = (inst.institution && inst.institution.name) || "";
+        }
+      } catch (e) { /* best-effort */ }
+    }
+
     const collection = $app.dao().findCollectionByNameOrId("plaid_items");
     const record = new Record(collection, {
       userId: user.id,
       accessToken: ex.access_token,
       itemId: ex.item_id,
-      institution: info.data.institution || "",
+      institution: instName,
       cursor: "",
     });
     $app.dao().saveRecord(record);
+    console.log("[plaid] item connected via web Link:", ex.item_id, instName ? "(" + instName + ")" : "");
 
-    return c.json(200, { item_id: ex.item_id });
+    return c.json(200, { item_id: ex.item_id, institution: instName });
   } catch (err) {
     return c.json(400, { error: String((err && err.message) || err) });
   }
