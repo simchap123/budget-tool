@@ -1,23 +1,27 @@
-# Budget Tool — AI-Powered Budget Management
+# Budget Tool — Budget Management
 
-Self-hosted budget tracking with AI-powered transaction categorization, bank connections, and financial reports.
+Self-hosted budget tracking with bank connections, smart categorization, budgets,
+and insights. **Live:** https://budget.grotketech.com
 
 ## Features
 
-🏦 **Bank Integration** — Connect via Plaid or upload statements
-🤖 **AI Categorization** — Claude auto-categorizes with learning
-📊 **Financial Reports** — Income statements like QuickBooks
-🎯 **Rule Engine** — ML-powered auto-categorization rules
-🔒 **Self-Hosted** — Full control, privacy, low cost
+🏦 **Bank connections** — Plaid Hosted Link (connect, auto-sync, dedup, re-auth) + CSV import/export
+🧠 **Smart categorization** — suggests a category from *your* history (Gemini fallback for new merchants)
+💸 **Transactions** — add / edit / delete, notes, month filter, search, pagination
+🎯 **Budgets** — zero-based, per category, with "suggest from spending"; create / edit / delete
+🔁 **Recurring** — subscription/bill detection + upcoming-bill forecast & dashboard widget
+📊 **Reports & analytics** — income/expense trends, category pie, category-over-time, savings rate, behavior analytics
+📱 **PWA** — installable, offline-aware, dark theme
+🔒 **Self-hosted** — full control, privacy, low cost
 
 ## Tech Stack
 
-- **Frontend**: React 19 + Vite + Tailwind CSS
-- **Backend**: PocketBase (SQLite)
-- **AI**: Claude 3.5 Sonnet
-- **Banking**: Plaid API
-- **Hosting**: DigitalOcean droplet
-- **Proxy**: Nginx
+- **Frontend**: React 19 + Vite + TypeScript + Tailwind CSS (Recharts charts)
+- **Backend**: PocketBase (SQLite) + JS hooks (`pb_hooks/`)
+- **Banking**: Plaid (Hosted Link, production + OAuth, webhooks)
+- **AI (optional)**: Google Gemini — category-suggestion fallback only
+- **Hosting**: DigitalOcean droplet + Nginx + Let's Encrypt wildcard SSL
+- **Tests**: Vitest (`npm test`, 43 tests)
 
 ## Project Structure
 
@@ -76,9 +80,8 @@ Copy environment file:
 cp .env.example .env.local
 ```
 
-Edit with your API keys:
-- `ANTHROPIC_API_KEY`
-- `PLAID_CLIENT_ID` and `PLAID_SECRET`
+Set the Plaid keys (and optional `GEMINI_API_KEY`) on the PocketBase process
+env — see the Environment Variables section below.
 
 ## Deployment
 
@@ -95,17 +98,17 @@ Quick summary:
 
 ## Database
 
-PocketBase uses SQLite. Collections:
+PocketBase uses SQLite. Collections in use:
 
-- **users** — User accounts (auth built-in)
-- **accounts** — Bank accounts (Plaid)
-- **transactions** — Bank transactions
-- **categories** — Spending categories
-- **rules** — AI categorization rules
-- **statements** — Generated reports
-- **audit_logs** — Change tracking
+- **users** — accounts (built-in auth)
+- **transactions** — amount, description, type, category, note, date, plaidId, userId
+- **categories** — user categories (name, color, userId)
+- **budgets** — per-category monthly budgets (category, budgetAmount, year, month, userId)
+- **plaid_items** — linked banks (accessToken, itemId, cursor, needsReauth) — admin-only
+- **plaid_pending** — link_token → user mapping for the Plaid webhook — admin-only
 
-Admin panel at: `http://localhost:8090/_/`
+Access rules are owner-scoped (`userId = @request.auth.id`) for user data and
+admin-only for Plaid secrets. Admin panel: `http://localhost:8090/_/`.
 
 ## API
 
@@ -129,6 +132,7 @@ npm run dev          # Development
 npm run build        # Production build
 npm run lint         # Linting
 npm run type-check   # TypeScript check
+npm test             # Vitest unit tests (43)
 
 # Backend
 cd backend
@@ -138,13 +142,17 @@ pocketbase admin     # Admin panel only
 
 ## Environment Variables
 
-See `.env.example`:
+Frontend build reads `VITE_API_URL` (defaults to `/api`). The Plaid + Gemini
+secrets live on the **PocketBase process env** (the pm2 ecosystem file in prod),
+read by the JS hooks in `backend/pb_hooks/`:
 ```
-VITE_API_URL=http://localhost:8090
-ANTHROPIC_API_KEY=sk-ant-...
-PLAID_CLIENT_ID=...
-PLAID_SECRET=...
+PLAID_CLIENT_ID / PLAID_SECRET_SANDBOX / PLAID_SECRET_PRODUCTION
+PLAID_ENV=sandbox|production
+PLAID_REDIRECT_URI=https://budget.grotketech.com   # registered in the Plaid dashboard
+PLAID_WEBHOOK_SECRET=...                            # authenticates the Plaid webhook
+GEMINI_API_KEY=...                                  # optional category-suggestion fallback
 ```
+See `.env.example` (and `OPERATIONS.md` for the live deployment).
 
 ## Project Decisions
 
@@ -170,7 +178,7 @@ Backup the `pb_data` folder regularly!
 
 - **Droplet**: $5-6/month (DigitalOcean)
 - **Domain**: $12+/year (optional)
-- **API calls**: Only Plaid & Anthropic (pay-as-you-go)
+- **API calls**: Plaid (banking) & optional Gemini (pay-as-you-go)
 - **Total**: ~$20-30/month all-in
 
 ## Architecture
@@ -203,8 +211,8 @@ Backup the `pb_data` folder regularly!
 └────────────────────────────────┘
 
 External APIs:
-├─ Plaid (banking)
-└─ Anthropic (AI)
+├─ Plaid (banking — Hosted Link + webhooks)
+└─ Google Gemini (optional category-suggestion fallback)
 ```
 
 ## Security
@@ -216,8 +224,10 @@ External APIs:
 
 ## Getting Help
 
+- **Operations / deploy / connect Chase**: See `OPERATIONS.md`
+- **Multi-app subdomain hosting**: See `deploy/MULTI_APP_HOSTING.md`
+- **Feature catalog & build status**: See `DEPLOYMENT_CHECKLIST.md`
 - **Setup**: See SETUP.md
-- **Development**: See frontend/ and backend/ README files
 - **Tech decisions**: See CLAUDE.md
 - **PocketBase docs**: https://pocketbase.io/docs
 - **React docs**: https://react.dev
