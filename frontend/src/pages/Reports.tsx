@@ -4,6 +4,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { TrendingUp, TrendingDown, DollarSign, Percent, ChevronLeft, ChevronRight } from 'lucide-react'
 import { monthRange, monthLabel, shiftMonth } from '../utils/dateRange'
 import { categorySpendingTrend, TrendPoint } from '../utils/categoryTrend'
+import { reportTotals, categoryBreakdown, monthlyTrend } from '../utils/reportStats'
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -71,79 +72,9 @@ export function Reports() {
     }
   }
 
-  const getCategoryStats = () => {
-    const stats: { [key: string]: { income: number; expense: number; count: number } } = {}
-
-    transactions.forEach((txn: any) => {
-      const category = txn.category || 'Uncategorized'
-      if (!stats[category]) {
-        stats[category] = { income: 0, expense: 0, count: 0 }
-      }
-      const amount = typeof txn.amount === 'string' ? parseFloat(txn.amount) : txn.amount
-      if (txn.type === 'income') {
-        stats[category].income += amount
-      } else {
-        stats[category].expense += amount
-      }
-      stats[category].count += 1
-    })
-
-    return Object.entries(stats).map(([name, data]) => ({
-      name,
-      ...data,
-      net: data.income - data.expense,
-    }))
-  }
-
-  const getTrendData = () => {
-    const byMonth: { [key: string]: { income: number; expense: number } } = {}
-
-    transactions.forEach((txn: any) => {
-      const date = new Date(txn.date)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-      if (!byMonth[monthKey]) {
-        byMonth[monthKey] = { income: 0, expense: 0 }
-      }
-
-      const amount = typeof txn.amount === 'string' ? parseFloat(txn.amount) : txn.amount
-      if (txn.type === 'income') {
-        byMonth[monthKey].income += amount
-      } else {
-        byMonth[monthKey].expense += amount
-      }
-    })
-
-    return Object.entries(byMonth)
-      .sort()
-      .map(([month, data]) => ({
-        month,
-        income: data.income,
-        expense: data.expense,
-        net: data.income - data.expense,
-      }))
-  }
-
-  const getTotals = () => {
-    const income = transactions
-      .filter((t: any) => t.type === 'income')
-      .reduce((sum, t: any) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount), 0)
-    const expense = transactions
-      .filter((t: any) => t.type === 'expense')
-      .reduce((sum, t: any) => sum + (typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount), 0)
-
-    return {
-      income,
-      expense,
-      net: income - expense,
-      savingsRate: income > 0 ? ((income - expense) / income) * 100 : 0,
-      count: transactions.length,
-    }
-  }
-
-  const categoryStats = getCategoryStats()
-  const trendData = getTrendData()
-  const totals = getTotals()
+  const categoryStats = categoryBreakdown(transactions)
+  const trendData = monthlyTrend(transactions)
+  const totals = reportTotals(transactions)
 
   const expenseChartData = categoryStats
     .filter((c) => c.expense > 0)
