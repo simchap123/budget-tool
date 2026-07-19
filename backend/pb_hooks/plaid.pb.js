@@ -175,6 +175,18 @@ routerAdd("GET", "/api/plaid/status", (c) => {
   }
 }, $apis.requireRecordAuth());
 
+// POST /api/plaid/link-event  { error, status, institution }
+// Logs where a Link session ended so a recurring onExit (no bank connected) is
+// diagnosable from `pm2 logs` — captures the last Link screen/status even when
+// Plaid attaches no error code.
+routerAdd("POST", "/api/plaid/link-event", (c) => {
+  try {
+    const d = $apis.requestInfo(c).data || {};
+    console.log("[plaid] link exit -> status:", d.status || "?", "| error:", d.error || "none", "| institution:", d.institution || "?");
+  } catch (e) { /* ignore */ }
+  return c.json(200, { ok: true });
+}, $apis.requireRecordAuth());
+
 // GET /api/plaid/bank-status?institution_id=ins_56 -> live login health for a bank.
 // Chase's `item_logins` status flips to DEGRADED/DOWN during their frequent OAuth
 // outages, which surface as a 500 on Chase's authorize page — this lets the UI say

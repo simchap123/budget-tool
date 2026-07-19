@@ -82,11 +82,20 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
     token: linkToken,
     receivedRedirectUri: isOAuthReturn ? window.location.href : undefined,
     onSuccess: (public_token, metadata) => finish(public_token, metadata?.institution?.name),
-    onExit: (err) => {
+    onExit: (err, metadata) => {
       localStorage.removeItem(TOKEN_KEY)
       setLinkToken(null)
       setLoading(false)
-      if (err) toast.error("Connection didn't finish: " + (err.display_message || err.error_message || 'cancelled'))
+      // Report where Link ended (status = last screen) so a recurring exit is
+      // diagnosable server-side even when Plaid attaches no error.
+      const info = {
+        error: err ? `${err.error_code}: ${err.error_message || err.display_message || ''}` : null,
+        status: metadata?.status || '',
+        institution: metadata?.institution?.name || '',
+      }
+      axios.post(`${apiUrl}/plaid/link-event`, info, { headers: headers() }).catch(() => {})
+      if (err) toast.error("Didn't finish: " + (err.display_message || err.error_message || err.error_code))
+      else if (metadata?.status) toast.info(`Connection closed at: ${metadata.status}`)
     },
   })
 
