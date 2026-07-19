@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { CalendarClock } from 'lucide-react'
 import { detectRecurring, upcomingBills, RecurringItem } from '../utils/recurring'
+import { formatShortDate } from '../utils/dateRange'
 
 // Compact Dashboard widget: recurring bills expected in the next ~3 weeks.
 // Renders nothing when there's nothing due (keeps the Dashboard uncluttered).
@@ -37,10 +38,6 @@ export function UpcomingBills() {
 
   if (loading || items.length === 0) return null
 
-  const fmt = (ymd: string) => {
-    const [y, m, d] = ymd.split('-').map(Number)
-    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
   const total = items.reduce((s, i) => s + i.avgAmount, 0)
 
   return (
@@ -55,7 +52,7 @@ export function UpcomingBills() {
           <div key={item.key} className="flex items-center justify-between gap-3">
             <p className="text-body-sm text-ink-300 truncate">{item.label}</p>
             <div className="flex items-center gap-4 shrink-0">
-              <span className="text-body-sm text-accent-breeze">~{fmt(item.nextDate)}</span>
+              <span className="text-body-sm text-accent-breeze">~{formatShortDate(item.nextDate)}</span>
               <span className="text-body-sm text-ink-200 w-20 text-right">${item.avgAmount.toFixed(2)}</span>
             </div>
           </div>

@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Repeat } from 'lucide-react'
 import { detectRecurring, RecurringItem } from '../utils/recurring'
 import { EmptyState } from '../components/ui/EmptyState'
+import { formatShortDate } from '../utils/dateRange'
 
 export function Recurring() {
   const [items, setItems] = useState<RecurringItem[]>([])
@@ -34,12 +35,6 @@ export function Recurring() {
   }
 
   const monthlyTotal = items.reduce((s, i) => s + i.monthlyEstimate, 0)
-
-  // Timezone-safe short date ("Aug 14") from a YYYY-MM-DD string.
-  const fmt = (ymd: string) => {
-    const [y, m, d] = ymd.split('-').map(Number)
-    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
 
   if (loading) {
     return (
@@ -83,7 +78,7 @@ export function Recurring() {
                     <p className="font-normal text-ink-50 truncate">{item.label}</p>
                     <p className="mt-1 text-body-sm text-ink-400">
                       {item.count}× · every ~{item.avgIntervalDays}d ·{' '}
-                      <span className="text-accent-breeze">next ~{fmt(item.nextDate)}</span>
+                      <span className="text-accent-breeze">next ~{formatShortDate(item.nextDate)}</span>
                     </p>
                   </div>
                 </div>

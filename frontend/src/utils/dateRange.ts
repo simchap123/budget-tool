@@ -37,6 +37,12 @@ export function normalizeDate(input: string): string {
   return `${iso} 00:00:00.000Z`
 }
 
+// Timezone-safe short date ("Aug 14") from a YYYY-MM-DD string.
+export function formatShortDate(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 // Shift a "YYYY-MM" string by delta months, timezone-safe.
 export function shiftMonth(ym: string, delta: number): string {
   const [y, m] = ym.split('-').map(Number)

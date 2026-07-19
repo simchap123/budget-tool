@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { monthRange, monthLabel, shiftMonth, normalizeDate } from './dateRange'
+import { monthRange, monthLabel, shiftMonth, normalizeDate, formatShortDate } from './dateRange'
 
 describe('monthRange', () => {
   it('returns an inclusive start and exclusive next-month end', () => {
@@ -20,6 +20,13 @@ describe('monthLabel', () => {
     expect(monthLabel('2026-07')).toBe('July 2026')
     expect(monthLabel('2026-01')).toBe('January 2026')
     expect(monthLabel('2025-12')).toBe('December 2025')
+  })
+})
+
+describe('formatShortDate', () => {
+  it('formats a YYYY-MM-DD as "Mon D" without a timezone shift', () => {
+    expect(formatShortDate('2026-08-14')).toBe('Aug 14')
+    expect(formatShortDate('2026-01-01')).toBe('Jan 1')
   })
 })
 
