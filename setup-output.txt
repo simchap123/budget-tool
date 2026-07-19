@@ -1,0 +1,14 @@
+🚀 SETTING UP DEMO ACCOUNT WITH CATEGORIES
+
+📍 Step 1: Navigate to app
+📍 Step 2: Create account for spentelnik+1@gmail.com
+  Email: spentelnik+1@gmail.com
+  Password: DemoPass123!
+✅ Account created
+
+📍 Step 3: Add sample transactions
+
+❌ Error: locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('button').filter({ hasText: /Add Transaction/i }).first()[22m
+

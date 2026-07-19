@@ -1,0 +1,5 @@
+🔍 VERIFYING ACCOUNT
+
+📍 Navigate to app
+📍 Click Login
+  No login link, trying button...

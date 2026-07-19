@@ -1,75 +1,100 @@
 const { chromium } = require('playwright');
 
 (async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
+  console.log('🧪 COMPLETE FLOW TEST: Dashboard → Reports\n');
 
-  page.on('console', msg => console.log(`[${msg.type().toUpperCase()}] ${msg.text()}`));
+  const browser = await chromium.launch({ headless: false, slowMo: 200 });
+  const page = await browser.newPage();
+  page.setViewportSize({ width: 1280, height: 1024 });
 
   try {
-    console.log('🌐 Opening app...');
-    await page.goto('http://68.183.101.60/', { waitUntil: 'networkidle' });
+    console.log('📍 Step 1: Login');
+    await page.goto('http://68.183.101.60', { waitUntil: 'networkidle', timeout: 10000 });
+    await page.waitForTimeout(800);
 
-    console.log('🖱️  Navigating to signup...');
-    await page.click('text=Get Started');
-    await page.waitForTimeout(500);
+    // Click the first button (should be Get Started or Login)
+    const firstBtn = await page.locator('button').first();
+    const btnText = await firstBtn.textContent();
+    console.log(`  Clicking: ${btnText.trim()}`);
+    await firstBtn.click();
+    await page.waitForTimeout(1500);
 
-    console.log('📝 Filling signup form...');
-    const uniqueId = Date.now();
-    const name = `TestUser${uniqueId}`;
-    const email = `test${uniqueId}@example.com`;
-    const password = 'TestPass123!';
+    // Check if we're on a login or signup page
+    const pageTitle = await page.locator('h1, h2').first().textContent();
+    console.log(`  Current form: "${pageTitle.trim()}"`);
 
-    await page.locator('input[type="text"]').first().fill(name);
-    await page.locator('input[type="email"]').first().fill(email);
-    const pwInputs = await page.locator('input[type="password"]').all();
-    await pwInputs[0].fill(password);
-    await pwInputs[1].fill(password);
+    if (pageTitle.includes('Sign') || pageTitle.includes('Login')) {
+      console.log('  ✅ On login page');
+      await page.locator('input[type="email"]').fill('demo-8esgml@example.com');
+      await page.locator('input[type="password"]').fill('DemoPass123!');
+    } else if (pageTitle.includes('Create')) {
+      // Try signing in instead
+      console.log('  On signup page, trying Sign in link');
+      const signInLink = await page.locator('a:has-text("Sign in")').first();
+      await signInLink.click();
+      await page.waitForTimeout(1000);
+      await page.locator('input[type="email"]').fill('demo-8esgml@example.com');
+      await page.locator('input[type="password"]').fill('DemoPass123!');
+    }
 
-    console.log('✓ Form filled, submitting...');
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(2000);
+    console.log('  Submitting credentials');
+    await page.locator('button[type="submit"]').first().click();
+    await page.waitForTimeout(2500);
 
-    console.log('');
-    console.log('📊 Dashboard loaded!');
-    const welcomeText = await page.locator('text=Welcome back').textContent();
-    console.log(`Welcome: "${welcomeText}"`);
+    const dashboardContent = await page.textContent('body');
+    if (dashboardContent.includes('Dashboard') || dashboardContent.includes('Transactions')) {
+      console.log('✅ Logged in - on dashboard\n');
+    } else {
+      console.log('⚠️  May not be logged in properly\n');
+    }
 
-    // Check stats
-    const statsCards = await page.locator('.card').all();
-    console.log(`Stats cards found: ${statsCards.length}`);
+    console.log('📍 Step 2: Navigate to Reports page');
+    const currentUrl = page.url();
+    console.log(`  Current URL: ${currentUrl}`);
 
-    console.log('');
-    console.log('➕ Adding a test transaction...');
-    await page.click('text=Add Transaction');
-    await page.waitForTimeout(500);
+    // Try multiple ways to find and click Reports
+    const reportsLinks = await page.locator('a:has-text("Reports"), button:has-text("Reports")').all();
+    console.log(`  Reports links found: ${reportsLinks.length}`);
 
-    await page.locator('input[type="number"]').fill('25.50');
-    await page.locator('input[placeholder="e.g., Groceries"]').fill('Groceries');
-    await page.locator('input[placeholder="e.g., Weekly shopping"]').fill('Weekly shopping');
+    if (reportsLinks.length > 0) {
+      await reportsLinks[0].click();
+      console.log('  ✅ Clicked Reports');
+      await page.waitForTimeout(2000);
+    } else {
+      // Try navigating directly
+      console.log('  No link found, navigating directly');
+      await page.goto('http://68.183.101.60/#/reports', { waitUntil: 'networkidle', timeout: 10000 });
+      await page.waitForTimeout(1500);
+    }
 
-    console.log('✓ Transaction form filled');
-    await page.click('text=Add Transaction', { timeout: 1000 });
-    await page.waitForTimeout(2000);
+    console.log('\n📍 Step 3: Verify Reports page');
+    const reportsContent = await page.textContent('body');
+    const reportsUrl = page.url();
 
-    console.log('✓ Transaction added!');
+    console.log(`  URL: ${reportsUrl}`);
+    console.log(`  Page has Reports title: ${reportsContent.includes('Reports') ? '✅' : '❌'}`);
+    console.log(`  Page has stats: ${reportsContent.includes('Total') ? '✅' : '❌'}`);
 
-    console.log('');
-    console.log('📸 Taking final screenshot...');
-    await page.screenshot({ path: 'dashboard-with-transaction.png' });
+    // Get all dollar amounts
+    const dollarMatches = reportsContent.match(/\$[\d,]+\.?\d*/g) || [];
+    const uniqueAmounts = [...new Set(dollarMatches)];
 
-    // Check if transaction appears
-    const transactionText = await page.locator('text=Weekly shopping').isVisible().catch(() => false);
-    console.log(`Transaction visible: ${transactionText}`);
+    if (uniqueAmounts.length > 0) {
+      console.log('\n💰 Amounts visible on Reports:');
+      uniqueAmounts.slice(0, 10).forEach(amt => console.log(`    ${amt}`));
+    } else {
+      console.log('\n⚠️  No dollar amounts found');
+    }
 
-    const stats = await page.locator('.card').first().textContent();
-    console.log(`First stat card: "${stats?.substring(0, 50)}..."`);
+    console.log('\n📷 Taking screenshot');
+    await page.screenshot({ path: 'complete-flow-reports.png', fullPage: true });
+    console.log('  ✅ Saved: complete-flow-reports.png');
 
-    console.log('');
-    console.log('✅ COMPLETE FLOW TEST PASSED!');
+    console.log('\n✅ TEST COMPLETE');
+    await page.waitForTimeout(1500);
 
   } catch (error) {
-    console.error('❌ Test error:', error.message);
+    console.error('❌ Error:', error.message);
   } finally {
     await browser.close();
   }

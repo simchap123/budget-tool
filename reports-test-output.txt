@@ -1,0 +1,10 @@
+🧪 TESTING REPORTS PAGE WITH FRESH ACCOUNT
+
+📍 Navigate and login
+✅ Logged in
+
+📍 Click Reports link
+❌ Error: locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('a, button').filter({ hasText: /Reports/i }).first()[22m
+
