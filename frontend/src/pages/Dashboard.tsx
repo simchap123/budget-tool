@@ -14,6 +14,7 @@ import { trackTransactionAction } from '../utils/analytics'
 import { monthRange } from '../utils/dateRange'
 import { toCSV } from '../utils/csv'
 import { filterTransactions } from '../utils/search'
+import { reportTotals } from '../utils/reportStats'
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -198,23 +199,9 @@ export function Dashboard({ user }: { user: any }) {
     URL.revokeObjectURL(url)
   }
 
-  const calculateStats = () => {
-    const income = transactions
-      .filter((t: any) => t.type === 'income')
-      .reduce((sum, t: any) => {
-        const amount = typeof t.amount === 'string' ? parseFloat(t.amount) : (t.amount || 0)
-        return sum + amount
-      }, 0)
-    const expenses = transactions
-      .filter((t: any) => t.type === 'expense')
-      .reduce((sum, t: any) => {
-        const amount = typeof t.amount === 'string' ? parseFloat(t.amount) : (t.amount || 0)
-        return sum + amount
-      }, 0)
-    return { income, expenses, net: income - expenses }
-  }
-
-  const stats = calculateStats()
+  // Same tested money math as Reports (single source of truth for summing amounts).
+  const totals = reportTotals(transactions)
+  const stats = { income: totals.income, expenses: totals.expense, net: totals.net }
   // Search filters the displayed list (monthly totals above stay for the month).
   const filtered = filterTransactions(transactions as any[], search)
   const totalPages = Math.max(1, Math.ceil(filtered.length / 25))
