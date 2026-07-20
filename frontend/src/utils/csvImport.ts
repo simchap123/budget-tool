@@ -26,6 +26,37 @@ export function hasSignedAmounts(headers: string[], rows: string[][]): boolean {
   return rows.some((r) => num(r[idx]) < 0)
 }
 
+// A transaction's identity for dedup: same day, amount, description and direction
+// is treated as the same transaction. Date is sliced to the day because the store
+// keeps a full timestamp ("2026-07-16 00:00:00.000Z") while imports carry "YYYY-MM-DD".
+export function txnSignature(t: { date: string; amount: number; description: string; type: string }): string {
+  return `${String(t.date).slice(0, 10)}|${Number(t.amount).toFixed(2)}|${String(t.description).trim()}|${t.type}`
+}
+
+// Split freshly-parsed rows into the ones NOT already in the account vs. how many
+// were duplicates. Uses a COUNT of each signature, not just presence, so a real
+// repeat purchase (two identical coffees the same day) still imports the second
+// copy when only one is already stored — while re-uploading an overlapping export
+// skips exactly the rows already there.
+export function dedupeAgainstExisting<T extends { date: string; amount: number; description: string; type: string }>(
+  candidates: T[],
+  existing: { date: string; amount: number; description: string; type: string }[]
+): { fresh: T[]; duplicates: number } {
+  const counts = new Map<string, number>()
+  for (const e of existing) {
+    const s = txnSignature(e)
+    counts.set(s, (counts.get(s) || 0) + 1)
+  }
+  const fresh: T[] = []
+  let duplicates = 0
+  for (const c of candidates) {
+    const s = txnSignature(c)
+    const n = counts.get(s) || 0
+    if (n > 0) { counts.set(s, n - 1); duplicates++ } else fresh.push(c)
+  }
+  return { fresh, duplicates }
+}
+
 // Map one parsed CSV row to a transaction, or null to skip it (no description, or
 // a zero / non-numeric amount). Tolerates the column names real banks use — esp.
 // Chase: "Transaction Date"/"Posting Date" for the date, a single signed "Amount",

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import axios from 'axios'
 import { trackImport } from '../utils/analytics'
 import { parseCSVLine } from '../utils/csv'
-import { csvRowToTransaction, hasSignedAmounts } from '../utils/csvImport'
+import { csvRowToTransaction, hasSignedAmounts, dedupeAgainstExisting, CsvTransaction } from '../utils/csvImport'
+import { fetchAllRecords } from '../utils/fetchAll'
 
 // Retry POSTs that hit API rate limiting (429/503) with linear backoff, so a
 // large import (e.g. 1,500-row Chase export) doesn't silently drop rows.
@@ -88,32 +89,43 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
       let imported = 0
       let failed = 0
 
+      // Parse every row first, so we can compare the whole batch against what's
+      // already in the account before writing anything.
+      const candidates: CsvTransaction[] = []
       for (let i = 0; i < parsedRows.length; i++) {
-        try {
-          const values = parsedRows[i]
-          const txn = csvRowToTransaction(headers, values, auth.record.id, signed)
-          if (!txn) {
-            failed++
-            continue
-          }
+        const txn = csvRowToTransaction(headers, parsedRows[i], auth.record.id, signed)
+        if (!txn) { failed++; continue }
+        candidates.push(txn)
+      }
 
+      // Skip rows already in the database (same day + amount + description +
+      // direction), so re-uploading an overlapping export only adds what's new.
+      const existing = await fetchAllRecords(
+        apiUrl,
+        'transactions',
+        'fields=date,amount,description,type',
+        { Authorization: `Bearer ${auth.token}` }
+      )
+      const { fresh, duplicates } = dedupeAgainstExisting(candidates, existing as any)
+
+      for (const txn of fresh) {
+        try {
           await postWithRetry(
             `${apiUrl}/collections/transactions/records`,
             txn,
-            {
-              headers: {
-                Authorization: `Bearer ${auth.token}`,
-              },
-            }
+            { headers: { Authorization: `Bearer ${auth.token}` } }
           )
-
           imported++
         } catch (err) {
           failed++
         }
       }
 
-      setSuccess(`✅ Imported ${imported} transactions${failed > 0 ? ` (${failed} failed)` : ''}`)
+      setSuccess(
+        `✅ Imported ${imported} transaction${imported === 1 ? '' : 's'}` +
+        (duplicates > 0 ? ` · skipped ${duplicates} already in your account` : '') +
+        (failed > 0 ? ` · ${failed} failed` : '')
+      )
       trackImport(imported)
       setFile(null)
       setPreview([])
