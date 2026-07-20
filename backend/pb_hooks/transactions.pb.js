@@ -89,11 +89,24 @@ onRecordBeforeCreateRequest((e) => {
   try {
     const cur = String(e.record.get("category") || "").trim();
     if (cur && cur !== "Random" && cur !== "Uncategorized") return;
+    const desc = e.record.get("description");
+    const uid = e.record.get("userId");
     // categorize_lib.js is generated from the user's labeled history and is
     // gitignored (it embeds real payee names); if it's absent the require throws
     // and the catch below leaves the category untouched.
-    const { categorize } = require(`${__hooks}/categorize_lib.js`);
-    const cat = categorize(e.record.get("description"));
+    const { merchantKey, categorize } = require(`${__hooks}/categorize_lib.js`);
+    const key = merchantKey(String(desc || ""));
+    // 1) the user's own vendor mapping wins (their personal rulebook)
+    if (key && uid) {
+      try {
+        const v = $app.dao().findFirstRecordByFilter(
+          "vendors", "userId = {:u} && matchKey = {:k}", { u: uid, k: key }
+        );
+        if (v && v.get("category")) { e.record.set("category", v.get("category")); return; }
+      } catch (err) { /* no vendor for this merchant yet */ }
+    }
+    // 2) fall back to the global categorizer
+    const cat = categorize(desc);
     if (cat) e.record.set("category", cat);
   } catch (err) {
     // ignore — leave the category as-is

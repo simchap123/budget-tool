@@ -9,6 +9,7 @@ import { Categories } from './pages/Categories'
 import { Analytics } from './pages/Analytics'
 import { Recurring } from './pages/Recurring'
 import { Giving } from './pages/Giving'
+import { Vendors } from './pages/Vendors'
 import { Header } from './components/Header'
 import { ToastProvider } from './components/ui/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -104,6 +105,9 @@ export default function App() {
         )}
         {currentPage === 'giving' && user && (
           <Giving />
+        )}
+        {currentPage === 'vendors' && user && (
+          <Vendors />
         )}
         {currentPage === 'dashboard' && !user && (
           <Home onNavigate={setCurrentPage} />
