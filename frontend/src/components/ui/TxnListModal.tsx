@@ -5,6 +5,8 @@ import { X, Pencil } from 'lucide-react'
 import { formatDate } from '../../utils/dateRange'
 import { txAmount } from '../../utils/reportStats'
 import { useCategories, invalidateCategories } from '../../hooks/useCategories'
+import { propagateCategory } from '../../utils/recategorize'
+import { merchantKey } from '../../utils/merchant'
 import { QuickCategorySheet } from './QuickCategorySheet'
 
 // A drill-down: renders a preloaded list of transactions with a running net
@@ -64,6 +66,12 @@ export function TxnListModal({
       )
       invalidateCategories()
       onChanged?.(txn.id, cat)
+      // Offer to apply to this merchant's other transactions.
+      const also = await propagateCategory(txn.description, cat)
+      if (also > 0) {
+        const key = merchantKey(txn.description || '')
+        setItems((prev) => prev.map((t) => (merchantKey(t.description || '') === key ? { ...t, category: cat } : t)))
+      }
     } catch {
       // Revert on failure.
       setItems((prev) => prev.map((t) => (t.id === txn.id ? { ...t, category: txn.category } : t)))

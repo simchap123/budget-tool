@@ -16,6 +16,7 @@ import { filterTransactions } from '../utils/search'
 import { reportTotals, txAmount } from '../utils/reportStats'
 import { CategorySelect } from '../components/ui/CategorySelect'
 import { useCategories, invalidateCategories } from '../hooks/useCategories'
+import { propagateCategory } from '../utils/recategorize'
 import { merchantKey } from '../utils/merchant'
 import { runAutoCategorize } from '../utils/autoCategorize'
 
@@ -220,6 +221,12 @@ export function Dashboard({ user }: { user: any }) {
       )
       trackTransactionAction('edit', txn.type)
       invalidateCategories()
+      // Offer to apply the same category to this merchant's other transactions.
+      const also = await propagateCategory(txn.description, category)
+      if (also > 0) {
+        toast.success(`Updated ${also} more ${also === 1 ? 'transaction' : 'transactions'}`)
+        await fetchTransactions()
+      }
     } catch (err: any) {
       console.error('Quick category change failed:', err)
       setTransactions((prev: any) =>

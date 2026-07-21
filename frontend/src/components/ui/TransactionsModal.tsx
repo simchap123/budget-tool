@@ -6,6 +6,8 @@ import { fetchAllRecords } from '../../utils/fetchAll'
 import { formatDate } from '../../utils/dateRange'
 import { txAmount } from '../../utils/reportStats'
 import { useCategories, invalidateCategories } from '../../hooks/useCategories'
+import { propagateCategory } from '../../utils/recategorize'
+import { merchantKey } from '../../utils/merchant'
 import { QuickCategorySheet } from './QuickCategorySheet'
 
 // A drill-down: pass a category / type / date window and it lists exactly those
@@ -46,6 +48,12 @@ export function TransactionsModal({
         { headers: { Authorization: `Bearer ${auth.token}` } }
       )
       invalidateCategories()
+      // Offer to apply to the merchant's other transactions; reflect it locally.
+      const also = await propagateCategory(txn.description, cat)
+      if (also > 0) {
+        const key = merchantKey(txn.description || '')
+        setTxns((prev) => (prev || []).map((t) => (merchantKey(t.description || '') === key ? { ...t, category: cat } : t)))
+      }
     } catch {
       // Revert on failure.
       setTxns((prev) => (prev || []).map((t) => (t.id === txn.id ? { ...t, category: txn.category } : t)))

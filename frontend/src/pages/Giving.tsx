@@ -19,7 +19,7 @@ export function Giving() {
   const [percent, setPercent] = useState('10')
   const [category, setCategory] = useState('')
   const [incomeCategory, setIncomeCategory] = useState('')
-  const [drill, setDrill] = useState<'month' | 'all' | null>(null)
+  const [drill, setDrill] = useState<null | { title: string; subtitle: string; category?: string; type?: 'income' | 'expense'; since?: string; until?: string }>(null)
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const auth = () => JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -171,7 +171,7 @@ export function Giving() {
           </div>
           <div>
             <p className="text-body-sm text-ink-500">Given</p>
-            <button type="button" onClick={() => category && setDrill('month')} className="inline-flex min-h-touch items-center text-lg text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See this month's giving">
+            <button type="button" onClick={() => category && setDrill({ title: `${category} giving`, subtitle: `${monthLabel(thisMonth)} · giving transactions`, category, type: 'expense', since: monthRange(thisMonth).start, until: monthRange(thisMonth).endExclusive })} className="inline-flex min-h-touch items-center text-lg text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See this month's giving">
               ${current.given.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </button>
           </div>
@@ -189,7 +189,7 @@ export function Giving() {
         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <p className="text-body-sm text-ink-500">Total given</p>
-            <button type="button" onClick={() => category && setDrill('all')} className="inline-flex min-h-touch items-center text-xl sm:text-2xl text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See all giving transactions">
+            <button type="button" onClick={() => category && setDrill({ title: `${category} giving`, subtitle: 'All-time giving transactions', category, type: 'expense' })} className="inline-flex min-h-touch items-center text-xl sm:text-2xl text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See all giving transactions">
               ${summary.totalGiven.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </button>
           </div>
@@ -212,9 +212,23 @@ export function Giving() {
               {summary.months.slice().reverse().map((m) => (
                 <tr key={m.month} className="border-t border-canvas-soft">
                   <td className="py-2 text-ink-200">{monthLabel(m.month)}</td>
-                  <td className="text-right text-ink-300">${m.income.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+                  <td className="text-right">
+                    <button
+                      onClick={() => setDrill({ title: `${monthLabel(m.month)} income`, subtitle: 'income transactions', type: 'income', since: monthRange(m.month).start, until: monthRange(m.month).endExclusive })}
+                      className="text-ink-300 underline decoration-dotted decoration-ink-600 underline-offset-4 hover:text-ink-100"
+                    >
+                      ${m.income.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </button>
+                  </td>
                   <td className="text-right text-accent-twilight">${m.target.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
-                  <td className="text-right text-accent-sunset">${m.given.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+                  <td className="text-right">
+                    <button
+                      onClick={() => category && setDrill({ title: `${category} giving`, subtitle: `${monthLabel(m.month)} · giving transactions`, category, type: 'expense', since: monthRange(m.month).start, until: monthRange(m.month).endExclusive })}
+                      className="text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80"
+                    >
+                      ${m.given.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </button>
+                  </td>
                   <td className={`text-right ${m.remaining <= 0 ? 'text-accent-breeze' : 'text-ink-400'}`}>
                     {m.remaining <= 0 ? '+' : '-'}${Math.abs(m.remaining).toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </td>
@@ -227,12 +241,12 @@ export function Giving() {
 
       {drill && (
         <TransactionsModal
-          title={`${category} giving`}
-          subtitle={drill === 'month' ? `${monthLabel(thisMonth)} · giving transactions` : 'All-time giving transactions'}
-          category={category}
-          type="expense"
-          since={drill === 'month' ? monthRange(thisMonth).start : undefined}
-          until={drill === 'month' ? monthRange(thisMonth).endExclusive : undefined}
+          title={drill.title}
+          subtitle={drill.subtitle}
+          category={drill.category}
+          type={drill.type}
+          since={drill.since}
+          until={drill.until}
           onClose={() => setDrill(null)}
         />
       )}
