@@ -5,6 +5,7 @@ import { Sparkles, X, ArrowRight, Check, Landmark, Upload } from 'lucide-react'
 import { fetchAllRecords } from '../utils/fetchAll'
 import { reportTotals } from '../utils/reportStats'
 import { suggestBudgets, BASIS_OPTIONS, BudgetBasis } from '../utils/budgetBasis'
+import { recurringByCategory } from '../utils/budgetInsights'
 import { useToast } from './ui/Toast'
 
 // AI-guided first-run setup: reads the user's spending, shows a short read on
@@ -35,6 +36,7 @@ export function Onboarding({
 
   const [basis, setBasis] = useState<BudgetBasis>('avg6')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [amounts, setAmounts] = useState<Record<string, string>>({}) // editable per-category budget
   const [applying, setApplying] = useState(false)
 
   const [givePercent, setGivePercent] = useState('10')
@@ -83,22 +85,35 @@ export function Onboarding({
     }
   }, [txns])
 
+  // Recurring monthly commitment per category — a budget should never be
+  // suggested below what the user is already committed to paying.
+  const recurByCat = useMemo(() => recurringByCategory(txns), [txns])
+
   const suggestions = useMemo(() => {
     const map = suggestBudgets(txns, basis, new Date())
-    return Object.entries(map)
-      .filter(([, amt]) => amt > 0)
-      .sort((a, b) => b[1] - a[1])
-  }, [txns, basis])
+    const cats = new Set([...Object.keys(map), ...Object.keys(recurByCat)])
+    return Array.from(cats)
+      .map((cat) => {
+        const basisAmt = map[cat] || 0
+        const floor = Math.round(recurByCat[cat]?.monthly || 0)
+        const amount = Math.max(basisAmt, floor)
+        return { cat, amount, floor, floored: floor > basisAmt && floor > 0 }
+      })
+      .filter((r) => r.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+  }, [txns, basis, recurByCat])
 
-  // Default-select categories that don't already have a budget.
+  // Default-select categories without a budget, and reset the editable amount to
+  // the fresh suggestion whenever the basis (and thus the suggestion) changes.
   useEffect(() => {
     setSelected((prev) => {
       const next = { ...prev }
-      for (const [cat] of suggestions) {
-        if (next[cat] === undefined) next[cat] = !existingBudgets[cat.toLowerCase()]
+      for (const s of suggestions) {
+        if (next[s.cat] === undefined) next[s.cat] = !existingBudgets[s.cat.toLowerCase()]
       }
       return next
     })
+    setAmounts(Object.fromEntries(suggestions.map((s) => [s.cat, String(s.amount)])))
   }, [suggestions, existingBudgets])
 
   const loadInsights = async () => {
@@ -116,10 +131,12 @@ export function Onboarding({
 
   const applyBudgets = async () => {
     setApplying(true)
-    const chosen = suggestions.filter(([cat]) => selected[cat])
+    const chosen = suggestions.filter((s) => selected[s.cat])
     let done = 0
     try {
-      for (const [category, amount] of chosen) {
+      for (const s of chosen) {
+        const category = s.cat
+        const amount = Math.max(1, Math.round(parseFloat(amounts[category]) || s.amount))
         const existingId = existingBudgets[category.toLowerCase()]
         if (existingId) {
           await axios.patch(`${apiUrl}/collections/budgets/records/${existingId}`, { budgetAmount: amount }, { headers: headers() })
@@ -202,6 +219,8 @@ export function Onboarding({
               suggestions={suggestions}
               selected={selected}
               setSelected={setSelected}
+              amounts={amounts}
+              setAmounts={setAmounts}
               existingBudgets={existingBudgets}
             />
           ) : (
@@ -219,7 +238,7 @@ export function Onboarding({
               step={step}
               hasData={hasData}
               applying={applying}
-              selectedCount={suggestions.filter(([c]) => selected[c]).length}
+              selectedCount={suggestions.filter((s) => selected[s.cat]).length}
               onNext={() => {
                 if (step === 0) {
                   const next = hasData ? 2 : 1
@@ -345,7 +364,7 @@ function Trends({ summary, insights, insightsLoading }: any) {
   )
 }
 
-function Budgets({ basis, setBasis, suggestions, selected, setSelected, existingBudgets }: any) {
+function Budgets({ basis, setBasis, suggestions, selected, setSelected, amounts, setAmounts, existingBudgets }: any) {
   return (
     <div>
       <label className="block">
@@ -357,28 +376,49 @@ function Budgets({ basis, setBasis, suggestions, selected, setSelected, existing
         </select>
       </label>
       <p className="mt-1 text-body-sm text-ink-500">
-        {BASIS_OPTIONS.find((o) => o.value === basis)?.hint}
+        {BASIS_OPTIONS.find((o) => o.value === basis)?.hint} · amounts are editable, and never dip below what recurs.
       </p>
 
       <div className="mt-4 space-y-1">
         {suggestions.length === 0 ? (
           <p className="py-6 text-center text-ink-400">Not enough spending history yet.</p>
         ) : (
-          suggestions.map(([cat, amt]: [string, number]) => {
+          suggestions.map((s: any) => {
+            const cat = s.cat
             const has = !!existingBudgets[cat.toLowerCase()]
             return (
-              <label key={cat} className="flex min-h-touch cursor-pointer items-center gap-3 rounded-sm px-2 hover:bg-canvas-soft">
+              <div key={cat} className="flex min-h-touch items-center gap-3 rounded-sm px-2">
                 <input
                   type="checkbox"
                   checked={!!selected[cat]}
-                  onChange={(e) => setSelected((s: any) => ({ ...s, [cat]: e.target.checked }))}
-                  className="h-4 w-4 accent-[#ff7a17]"
+                  onChange={(e) => setSelected((prev: any) => ({ ...prev, [cat]: e.target.checked }))}
+                  aria-label={`Include ${cat}`}
+                  className="h-4 w-4 shrink-0 accent-[#ff7a17]"
                 />
-                <span className="min-w-0 flex-1 truncate text-ink-200">
-                  {cat} {has && <span className="text-body-sm text-ink-500">· updates existing</span>}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-ink-200">{cat}</span>
+                  {(has || s.floored) && (
+                    <span className="block text-body-sm text-ink-500">
+                      {has && 'updates existing'}
+                      {has && s.floored && ' · '}
+                      {s.floored && <span className="text-accent-twilight">🔁 covers ${s.floor}/mo recurring</span>}
+                    </span>
+                  )}
                 </span>
-                <span className="shrink-0 text-ink-100">${amt.toLocaleString()}/mo</span>
-              </label>
+                {/* Editable amount, so users can adjust or add their own number. */}
+                <span className="inline-flex shrink-0 items-center gap-1">
+                  <span className="text-ink-500">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={amounts[cat] ?? String(s.amount)}
+                    onChange={(e) => setAmounts((prev: any) => ({ ...prev, [cat]: e.target.value }))}
+                    aria-label={`Budget for ${cat}`}
+                    className="w-20 rounded-sm border border-ink-500 bg-canvas-soft px-2 py-1 text-right text-ink-50 focus:border-accent-sunset focus:outline-none"
+                  />
+                  <span className="text-body-sm text-ink-500">/mo</span>
+                </span>
+              </div>
             )
           })
         )}
