@@ -339,6 +339,10 @@ function Welcome({
                     {t.label} {t.id === 'standard' && <span className="text-body-sm text-accent-sunset">· recommended</span>}
                   </span>
                   <span className="block text-body-sm text-ink-500">{t.blurb} ({t.categories.length} categories)</span>
+                  {/* A few real examples so the level of detail is concrete. */}
+                  <span className="mt-0.5 block truncate text-body-sm text-ink-600">
+                    e.g. {t.categories.slice(0, 3).join(' · ')}…
+                  </span>
                 </span>
                 {active && <Check size={18} className="shrink-0 text-accent-sunset" />}
               </button>

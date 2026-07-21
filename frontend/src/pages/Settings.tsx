@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import axios from 'axios'
 import { LogOut, ChevronRight } from 'lucide-react'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { BankConnections } from '../components/BankConnections'
 import { useToast } from '../components/ui/Toast'
 import { runAutoCategorize } from '../utils/autoCategorize'
 import { invalidateCategories } from '../hooks/useCategories'
+import { CATEGORY_TIERS } from '../utils/categoryTiers'
 
 // Central place for account-level configuration. Bank linking lives here rather
 // than on the Dashboard, which is a working surface — connecting a bank is a
@@ -22,6 +24,38 @@ export function Settings({
 }) {
   const toast = useToast()
   const [categorizing, setCategorizing] = useState(false)
+  const [seedingTier, setSeedingTier] = useState<string | null>(null)
+
+  // Switch category detail level anytime. This is additive and non-destructive:
+  // it only creates the tier's categories that don't already exist. Your
+  // transactions and the categories you already use are never touched — so
+  // moving from Simple to Detailed just gives you more buckets to sort into.
+  const applyTier = async (tierId: string) => {
+    const tier = CATEGORY_TIERS.find((t) => t.id === tierId)
+    if (!tier || seedingTier) return
+    const ok = window.confirm(
+      `Add the “${tier.label}” category set (${tier.categories.length} categories)?\n\n` +
+        `This only adds categories you don't already have. Your transactions and existing categories stay exactly as they are — nothing is renamed or recategorized.`
+    )
+    if (!ok) return
+    setSeedingTier(tierId)
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const { data } = await axios.post(
+        `${apiUrl}/rpc/seed-categories`,
+        { names: tier.categories },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      )
+      invalidateCategories()
+      const added = data?.created ?? 0
+      toast.success(added > 0 ? `Added ${added} new ${tier.label.toLowerCase()} categories` : `You already have every ${tier.label.toLowerCase()} category`)
+    } catch (e: any) {
+      toast.error('Failed to add categories: ' + (e?.response?.data?.error || e?.message || 'unknown'))
+    } finally {
+      setSeedingTier(null)
+    }
+  }
 
   // All-time sweep: categorizes every uncategorized transaction in the account
   // (not just the current month), history + AI, looping until the queue is empty.
@@ -84,6 +118,36 @@ export function Settings({
         </div>
         {/* Renders nothing until at least one bank is linked. */}
         <BankConnections />
+      </section>
+
+      {/* Category detail level — switch the starter system anytime. Additive, so
+          it never loses transactions or existing categories. */}
+      <section className="mt-10">
+        <h2 className="text-lg font-normal text-ink-50">Category detail level</h2>
+        <p className="mt-1 text-body-sm text-ink-500">
+          Add a broader or more detailed category set. This only adds categories — your
+          transactions and existing categories are never changed.
+        </p>
+        <div className="mt-4 space-y-2">
+          {CATEGORY_TIERS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => applyTier(t.id)}
+              disabled={!!seedingTier}
+              className="flex w-full items-center gap-3 rounded-sm border border-ink-700 p-4 text-left transition-colors hover:bg-canvas-soft disabled:opacity-60"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-ink-100">
+                  {t.label}{' '}
+                  {t.id === 'standard' && <span className="text-body-sm text-accent-sunset">· recommended</span>}
+                </span>
+                <span className="block text-body-sm text-ink-500">{t.blurb} ({t.categories.length} categories)</span>
+                <span className="mt-0.5 block truncate text-body-sm text-ink-600">e.g. {t.categories.slice(0, 3).join(' · ')}…</span>
+              </span>
+              <span className="shrink-0 text-body-sm text-ink-400">{seedingTier === t.id ? 'Adding…' : 'Add set'}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* Shortcuts to the pages that own their own settings */}
