@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Landmark, Tags, HandHeart, LogOut, ChevronRight, Sparkles, Wand2 } from 'lucide-react'
+import { LogOut, ChevronRight } from 'lucide-react'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { BankConnections } from '../components/BankConnections'
 import { useToast } from '../components/ui/Toast'
@@ -39,7 +39,7 @@ export function Settings({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div>
         <h1 className="text-display-lg">Settings</h1>
         <p className="mt-2 text-ink-400">Banks, categories, and account</p>
@@ -51,7 +51,6 @@ export function Settings({
           onClick={onStartSetup}
           className="mt-6 flex w-full items-center gap-3 rounded-sm border border-accent-sunset/40 bg-accent-sunset/10 p-4 text-left transition-colors hover:bg-accent-sunset/15"
         >
-          <Sparkles size={20} className="shrink-0 text-accent-sunset" />
           <span className="min-w-0 flex-1">
             <span className="block text-ink-100">Set up with AI</span>
             <span className="block text-body-sm text-ink-400">Analyze your spending and suggest budgets &amp; goals</span>
@@ -66,7 +65,6 @@ export function Settings({
         disabled={categorizing}
         className="mt-4 flex w-full items-center gap-3 rounded-sm border border-accent-twilight/40 bg-accent-twilight/10 p-4 text-left transition-colors hover:bg-accent-twilight/15 disabled:opacity-60"
       >
-        <Wand2 size={20} className="shrink-0 text-accent-twilight" />
         <span className="min-w-0 flex-1">
           <span className="block text-ink-100">{categorizing ? 'Categorizing…' : 'Categorize all uncategorized (AI)'}</span>
           <span className="block text-body-sm text-ink-400">Sweeps every uncategorized transaction across all months — history first, then AI</span>
@@ -76,10 +74,7 @@ export function Settings({
 
       {/* Banks */}
       <section className="mt-8">
-        <div className="flex items-center gap-2">
-          <Landmark size={18} className="text-accent-breeze" />
-          <h2 className="text-lg font-normal text-ink-50">Bank connections</h2>
-        </div>
+        <h2 className="text-lg font-normal text-ink-50">Bank connections</h2>
         <p className="mt-1 text-body-sm text-ink-500">
           Link an account to sync transactions automatically. Your existing
           transactions stay if you later disconnect.
@@ -96,13 +91,11 @@ export function Settings({
         <h2 className="text-lg font-normal text-ink-50">Manage</h2>
         <div className="mt-4 card divide-y divide-ink-700">
           <SettingsLink
-            icon={<Tags size={18} className="text-accent-sunset" />}
             title="Categories"
             description="Add, rename, recolour, and bulk-recategorize"
             onClick={() => onNavigate('categories')}
           />
           <SettingsLink
-            icon={<HandHeart size={18} className="text-accent-twilight" />}
             title="Giving"
             description="Set the percentage of income you give, and which category tracks it"
             onClick={() => onNavigate('giving')}
@@ -129,12 +122,10 @@ export function Settings({
 }
 
 function SettingsLink({
-  icon,
   title,
   description,
   onClick,
 }: {
-  icon: React.ReactNode
   title: string
   description: string
   onClick: () => void
@@ -144,7 +135,6 @@ function SettingsLink({
       onClick={onClick}
       className="flex w-full min-h-touch items-center gap-3 p-4 text-left transition-colors hover:bg-canvas-soft"
     >
-      <span className="shrink-0">{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-ink-100">{title}</span>
         <span className="block text-body-sm text-ink-500">{description}</span>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { HandHeart } from 'lucide-react'
+
 import { useToast } from '../components/ui/Toast'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { computeGiving, GivingSummary } from '../utils/givingCalc'
@@ -97,15 +97,10 @@ export function Giving() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 p-2 rounded-full bg-accent-twilight/15 text-accent-twilight">
-          <HandHeart size={22} />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-display-lg">Giving</h1>
-          <p className="mt-1 text-ink-400">Track a percentage of your income toward giving (tithe, charity, etc.)</p>
-        </div>
+    <div className="mx-auto max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8 page-enter">
+      <div>
+        <h1 className="text-display-lg">Giving</h1>
+        <p className="mt-2 text-ink-400">Track a percentage of your income toward giving (tithe, charity, etc.)</p>
       </div>
 
       {/* Config */}

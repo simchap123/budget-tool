@@ -279,9 +279,6 @@ function StepButton({ step, hasData, applying, selectedCount, onNext }: any) {
 function Welcome({ hasData }: { hasData: boolean }) {
   return (
     <div className="text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent-sunset/15">
-        <Sparkles size={26} className="text-accent-sunset" />
-      </div>
       <h3 className="text-display-sm">Let's build your budget</h3>
       <p className="mx-auto mt-3 max-w-sm text-ink-400">
         {hasData

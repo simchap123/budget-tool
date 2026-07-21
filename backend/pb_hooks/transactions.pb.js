@@ -112,3 +112,106 @@ onRecordBeforeCreateRequest((e) => {
     // ignore — leave the category as-is
   }
 }, "transactions");
+
+// POST /api/rpc/merge-category  { from, to }  -> { movedTxns, budgetMerged }
+// Merge category `from` into `to`: re-file every transaction, fold budgets
+// (sum the amounts), re-point vendors, and delete the leftover `from` category
+// record. Owner-scoped. Used by the "Merge categories" and "Merge budgets" UIs.
+routerAdd("POST", "/api/rpc/merge-category", (c) => {
+  try {
+    const info = $apis.requestInfo(c);
+    const user = info.authRecord;
+    const from = String((info.data && info.data.from) || "").trim();
+    const to = String((info.data && info.data.to) || "").trim();
+    if (!from || !to) throw new Error("from and to are required");
+    if (from === to) throw new Error("from and to must differ");
+
+    const dao = $app.dao();
+
+    // 1) Re-file transactions.
+    const txns = dao.findRecordsByFilter(
+      "transactions", "userId = {:u} && category = {:c}", "-created", 100000, 0, { u: user.id, c: from }
+    );
+    let movedTxns = 0;
+    txns.forEach((r) => { r.set("category", to); dao.saveRecord(r); movedTxns++; });
+
+    // 2) Fold budgets: add the `from` budget amount into `to` (create if needed), delete `from`.
+    let budgetMerged = false;
+    try {
+      const fromBudgets = dao.findRecordsByFilter("budgets", "userId = {:u} && category = {:c}", "-created", 50, 0, { u: user.id, c: from });
+      if (fromBudgets.length) {
+        let fromAmt = 0;
+        fromBudgets.forEach((b) => { fromAmt += Number(b.get("budgetAmount")) || 0; });
+        const toBudgets = dao.findRecordsByFilter("budgets", "userId = {:u} && category = {:c}", "-created", 50, 0, { u: user.id, c: to });
+        if (toBudgets.length) {
+          const t = toBudgets[0];
+          t.set("budgetAmount", (Number(t.get("budgetAmount")) || 0) + fromAmt);
+          dao.saveRecord(t);
+        } else {
+          const nb = new Record(dao.findCollectionByNameOrId("budgets"));
+          nb.set("userId", user.id); nb.set("category", to); nb.set("budgetAmount", fromAmt);
+          nb.set("year", new Date().getFullYear()); nb.set("month", new Date().getMonth() + 1);
+          dao.saveRecord(nb);
+        }
+        fromBudgets.forEach((b) => dao.deleteRecord(b));
+        budgetMerged = true;
+      }
+    } catch (e) { /* budgets optional */ }
+
+    // 3) Re-point vendors that carried the `from` category.
+    try {
+      const vends = dao.findRecordsByFilter("vendors", "userId = {:u} && category = {:c}", "-count", 5000, 0, { u: user.id, c: from });
+      vends.forEach((v) => { v.set("category", to); dao.saveRecord(v); });
+    } catch (e) { /* vendors optional */ }
+
+    // 4) Delete the leftover `from` category record(s).
+    try {
+      const cats = dao.findRecordsByFilter("categories", "userId = {:u} && name = {:c}", "-created", 50, 0, { u: user.id, c: from });
+      cats.forEach((r) => dao.deleteRecord(r));
+    } catch (e) { /* category may be string-only */ }
+
+    return c.json(200, { movedTxns: movedTxns, budgetMerged: budgetMerged });
+  } catch (err) {
+    return c.json(400, { error: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());
+
+// POST /api/rpc/merge-vendor  { fromKey, toKey }  -> { movedTxns }
+// Merge vendor `fromKey` into `toKey`: give every transaction that rolls up to
+// fromKey the category of the target vendor, then delete the fromKey vendor
+// record. (Transactions roll up by merchant key derived from the description, so
+// this aligns their category; the target vendor's name/category becomes the home.)
+routerAdd("POST", "/api/rpc/merge-vendor", (c) => {
+  try {
+    const info = $apis.requestInfo(c);
+    const user = info.authRecord;
+    const fromKey = String((info.data && info.data.fromKey) || "").trim();
+    const toKey = String((info.data && info.data.toKey) || "").trim();
+    if (!fromKey || !toKey) throw new Error("fromKey and toKey are required");
+    if (fromKey === toKey) throw new Error("fromKey and toKey must differ");
+
+    const dao = $app.dao();
+    const toVendor = dao.findFirstRecordByFilter("vendors", "userId = {:u} && matchKey = {:k}", { u: user.id, k: toKey });
+    const fromVendor = dao.findFirstRecordByFilter("vendors", "userId = {:u} && matchKey = {:k}", { u: user.id, k: fromKey });
+    if (!toVendor) throw new Error("target vendor not found");
+
+    const cat = toVendor.get("category");
+    let movedTxns = 0;
+    if (cat) {
+      // Re-file the fromKey vendor's transactions into the target's category.
+      const txns = dao.findRecordsByFilter(
+        "transactions", "userId = {:u} && description ~ {:k}", "-created", 100000, 0, { u: user.id, k: fromKey }
+      );
+      txns.forEach((r) => { r.set("category", cat); dao.saveRecord(r); movedTxns++; });
+    }
+    // Fold the from vendor's count into the target and remove it.
+    if (fromVendor) {
+      toVendor.set("count", (Number(toVendor.get("count")) || 0) + (Number(fromVendor.get("count")) || 0));
+      dao.saveRecord(toVendor);
+      dao.deleteRecord(fromVendor);
+    }
+    return c.json(200, { movedTxns: movedTxns });
+  } catch (err) {
+    return c.json(400, { error: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());

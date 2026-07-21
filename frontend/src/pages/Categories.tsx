@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
-import { Trash2 } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { BulkRecategorize } from '../components/BulkRecategorize'
 import { fetchAllRecords } from '../utils/fetchAll'
+import { invalidateCategories } from '../hooks/useCategories'
 import { VendorsPanel } from './Vendors'
 
 interface Category {
@@ -29,6 +30,48 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [usedCategories, setUsedCategories] = useState<string[]>([])
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [mergeTarget, setMergeTarget] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const apiUrl = import.meta.env.VITE_API_URL || '/api'
+  const authHeaders = () => ({ Authorization: `Bearer ${JSON.parse(localStorage.getItem('pb_auth') || '{}').token}` })
+
+  // ALL categories the user has — records AND ones that only live as strings on
+  // transactions (so nothing is hidden from merge/delete).
+  const recordByName = useMemo(() => new Map(categories.map((c) => [c.name, c])), [categories])
+  const allNames = useMemo(
+    () => Array.from(new Set([...categories.map((c) => c.name), ...usedCategories])).sort((a, b) => a.localeCompare(b)),
+    [categories, usedCategories]
+  )
+  const selectedNames = allNames.filter((n) => selected[n])
+
+  const toggle = (name: string) => setSelected((s) => ({ ...s, [name]: !s[name] }))
+
+  // Bulk merge: fold every selected category into `target` (transactions + budgets
+  // + vendors), server-side, one call each. Also used for delete (target=Uncategorized).
+  const runMerge = async (target: string) => {
+    const froms = selectedNames.filter((n) => n !== target)
+    if (!target || froms.length === 0) return
+    setBusy(true)
+    let moved = 0
+    try {
+      for (const from of froms) {
+        const { data } = await axios.post(`${apiUrl}/rpc/merge-category`, { from, to: target }, { headers: authHeaders() })
+        moved += data?.movedTxns || 0
+      }
+      toast.success(`Merged ${froms.length} categor${froms.length === 1 ? 'y' : 'ies'} into ${target} · ${moved} transactions`)
+      setSelected({})
+      setMergeTarget('')
+      await fetchCategories()
+      await fetchUsedCategories()
+      invalidateCategories()
+    } catch (e: any) {
+      toast.error('Merge failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     fetchCategories()
@@ -136,7 +179,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div>
         <h1 className="text-display-lg">Categories &amp; Vendors</h1>
         <p className="mt-2 text-ink-400">Define your spending buckets, and map merchants to them</p>
@@ -227,46 +270,77 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
             </div>
           )}
 
-          {/* Categories grid */}
-          <div className="mt-8">
+          {/* Bulk-merge action bar — appears when categories are selected */}
+          {selectedNames.length > 0 && (
+            <div className="mt-6 card p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-ink-100">{selectedNames.length} selected</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={mergeTarget} onChange={(e) => setMergeTarget(e.target.value)} className="input-base" aria-label="Merge into">
+                  <option value="">Merge into…</option>
+                  {allNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+                <button disabled={busy || !mergeTarget} onClick={() => runMerge(mergeTarget)} className="btn-primary px-4 disabled:opacity-50">
+                  {busy ? 'Merging…' : 'Merge'}
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => { if (window.confirm(`Move ${selectedNames.length} categor${selectedNames.length === 1 ? 'y' : 'ies'} to Uncategorized?`)) runMerge('Uncategorized') }}
+                  className="btn-secondary px-4"
+                >
+                  Delete → Uncategorized
+                </button>
+                <button onClick={() => setSelected({})} className="px-2 text-body-sm text-ink-500 hover:text-ink-300">Clear</button>
+              </div>
+            </div>
+          )}
+
+          {/* Every category — records AND transaction-only. Click to select; bulk-merge above. */}
+          <div className="mt-6">
             {loading ? (
               <div className="card p-12 text-center text-ink-400">Loading…</div>
-            ) : categories.length === 0 ? (
+            ) : allNames.length === 0 ? (
               <div className="card p-12 text-center">
                 <p className="text-ink-400">No categories yet</p>
-                <p className="mt-1 text-body-sm text-ink-500">Create categories to organize your budget</p>
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                {categories.map((cat) => (
-                  <div key={cat.id} className="card p-4 flex items-center justify-between gap-3 group">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: cat.color }} />
-                      <p className="font-normal text-ink-50">{cat.name}</p>
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {allNames.map((name) => {
+                  const rec = recordByName.get(name)
+                  const isSel = !!selected[name]
+                  return (
+                    <div
+                      key={name}
+                      onClick={() => toggle(name)}
+                      className={`card p-4 flex items-center justify-between gap-3 cursor-pointer transition-colors ${isSel ? 'ring-2 ring-accent-sunset bg-canvas-soft' : 'hover:bg-canvas-soft/50'}`}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSel}
+                          onChange={() => toggle(name)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 shrink-0 accent-[#ff7a17]"
+                          aria-label={`Select ${name}`}
+                        />
+                        {rec ? (
+                          <div className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: rec.color }} />
+                        ) : (
+                          <div className="h-4 w-4 shrink-0 rounded-full border border-ink-600" title="Transaction-only category (no record)" />
+                        )}
+                        <p className="truncate text-ink-50">{name}</p>
+                      </div>
+                      {rec && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditCategory(rec) }}
+                          aria-label={`Edit ${name}`}
+                          className="shrink-0 p-1 text-ink-500 hover:text-ink-200"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
                     </div>
-                    {/* Touch devices have no hover, so these would never appear.
-                        Always visible on coarse pointers; reveal-on-hover only
-                        where a real pointer exists. */}
-                    <div className="flex gap-2 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100">
-                      <button
-                        onClick={() => handleEditCategory(cat)}
-                        aria-label={`Edit ${cat.name}`}
-                        className="p-1 hover:bg-ink-700 rounded transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => setDeleteId(cat.id)}
-                        aria-label={`Delete ${cat.name}`}
-                        className="p-1 hover:bg-red-500/20 rounded transition-colors text-red-400"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
