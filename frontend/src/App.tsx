@@ -7,6 +7,7 @@ import { Signup } from './pages/Signup'
 import { Budget } from './pages/Budget'
 import { Categories } from './pages/Categories'
 import { Giving } from './pages/Giving'
+import { Debts } from './pages/Debts'
 import { Settings } from './pages/Settings'
 import { Header } from './components/Header'
 import { Onboarding } from './components/Onboarding'
@@ -118,6 +119,9 @@ export default function App() {
         )}
         {currentPage === 'giving' && user && (
           <Giving />
+        )}
+        {currentPage === 'debts' && user && (
+          <Debts />
         )}
         {/* 'vendors' now opens the merged Categories & Vendors page on its
             Vendors tab, so old links and the bottom-nav still resolve. */}

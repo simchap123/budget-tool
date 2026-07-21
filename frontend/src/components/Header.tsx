@@ -77,6 +77,16 @@ export function Header({
                   Giving
                 </button>
                 <button
+                  onClick={() => handleNavClick('debts')}
+                  className={`text-body-md font-normal transition-colors ${
+                    currentPage === 'debts'
+                      ? 'text-accent-sunset'
+                      : 'text-ink-400 hover:text-ink-200'
+                  }`}
+                >
+                  Debts
+                </button>
+                <button
                   onClick={() => handleNavClick('categories')}
                   className={`text-body-md font-normal transition-colors ${
                     currentPage === 'categories' || currentPage === 'vendors'
@@ -179,6 +189,16 @@ export function Header({
                     }`}
                   >
                     Giving
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('debts')}
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'debts'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Debts
                   </button>
                   <button
                     onClick={() => handleNavClick('categories')}
