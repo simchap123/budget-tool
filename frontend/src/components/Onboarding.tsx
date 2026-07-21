@@ -6,6 +6,8 @@ import { fetchAllRecords } from '../utils/fetchAll'
 import { reportTotals } from '../utils/reportStats'
 import { suggestBudgets, BASIS_OPTIONS, BudgetBasis } from '../utils/budgetBasis'
 import { recurringByCategory } from '../utils/budgetInsights'
+import { CATEGORY_TIERS } from '../utils/categoryTiers'
+import { invalidateCategories } from '../hooks/useCategories'
 import { useToast } from './ui/Toast'
 
 // AI-guided first-run setup: reads the user's spending, shows a short read on
@@ -40,6 +42,25 @@ export function Onboarding({
   const [applying, setApplying] = useState(false)
 
   const [givePercent, setGivePercent] = useState('10')
+  const [chosenTier, setChosenTier] = useState<string | null>(null)
+  const [seeding, setSeeding] = useState(false)
+
+  // Seed a starter category system. Users can rename/merge/add later.
+  const pickTier = async (tierId: string) => {
+    const tier = CATEGORY_TIERS.find((t) => t.id === tierId)
+    if (!tier || seeding) return
+    setSeeding(true)
+    try {
+      const { data } = await axios.post(`${apiUrl}/rpc/seed-categories`, { names: tier.categories }, { headers: headers() })
+      setChosenTier(tierId)
+      invalidateCategories()
+      toast.success(`Added ${data?.created ?? tier.categories.length} ${tier.label.toLowerCase()} categories`)
+    } catch (e: any) {
+      toast.error('Could not add categories: ' + (e?.response?.data?.error || e?.message))
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -207,7 +228,7 @@ export function Onboarding({
           {loading ? (
             <p className="py-10 text-center text-ink-400">Reading your spending…</p>
           ) : step === 0 ? (
-            <Welcome hasData={hasData} />
+            <Welcome hasData={hasData} onPickTier={pickTier} chosenTier={chosenTier} seeding={seeding} />
           ) : step === 1 && !hasData ? (
             <NoData onNavigate={(p) => { dismiss(); onNavigate(p) }} />
           ) : step === 2 || (step === 1 && hasData) ? (
@@ -276,15 +297,56 @@ function StepButton({ step, hasData, applying, selectedCount, onNext }: any) {
   )
 }
 
-function Welcome({ hasData }: { hasData: boolean }) {
+function Welcome({
+  hasData,
+  onPickTier,
+  chosenTier,
+  seeding,
+}: {
+  hasData: boolean
+  onPickTier: (id: string) => void
+  chosenTier: string | null
+  seeding: boolean
+}) {
   return (
-    <div className="text-center">
-      <h3 className="text-display-sm">Let's build your budget</h3>
-      <p className="mx-auto mt-3 max-w-sm text-ink-400">
-        {hasData
-          ? "I'll look at your spending, show you the trends and habits I notice, then suggest budgets you can apply in one tap."
-          : "First we need some transactions. Connect a bank or import a CSV, then come back and I'll set everything up."}
-      </p>
+    <div>
+      <div className="text-center">
+        <h3 className="text-display-sm">Let's build your budget</h3>
+        <p className="mx-auto mt-3 max-w-sm text-ink-400">
+          {hasData
+            ? "I'll look at your spending, show you the trends and habits I notice, then suggest budgets you can apply in one tap."
+            : "First we need some transactions. Connect a bank or import a CSV, then come back and I'll set everything up."}
+        </p>
+      </div>
+
+      {/* Starter category system — pick one, add/rename/merge more anytime. */}
+      <div className="mt-6">
+        <p className="mb-2 text-body-sm text-ink-400">How detailed do you want your categories?</p>
+        <div className="space-y-2">
+          {CATEGORY_TIERS.map((t) => {
+            const active = chosenTier === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => onPickTier(t.id)}
+                disabled={seeding}
+                className={`flex w-full items-center gap-3 rounded-sm border p-3 text-left transition-colors disabled:opacity-60 ${
+                  active ? 'border-accent-sunset bg-accent-sunset/10' : 'border-ink-700 hover:bg-canvas-soft'
+                }`}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-ink-100">
+                    {t.label} {t.id === 'standard' && <span className="text-body-sm text-accent-sunset">· recommended</span>}
+                  </span>
+                  <span className="block text-body-sm text-ink-500">{t.blurb} ({t.categories.length} categories)</span>
+                </span>
+                {active && <Check size={18} className="shrink-0 text-accent-sunset" />}
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-body-sm text-ink-500">Optional — you can skip this and add categories as you go.</p>
+      </div>
     </div>
   )
 }

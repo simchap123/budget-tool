@@ -215,3 +215,40 @@ routerAdd("POST", "/api/rpc/merge-vendor", (c) => {
     return c.json(400, { error: String((err && err.message) || err) });
   }
 }, $apis.requireRecordAuth());
+
+// POST /api/rpc/seed-categories  { names: string[] }  -> { created }
+// Create category records for the caller from an onboarding tier, skipping any
+// name they already have. Colours are assigned from a fixed palette cyclically.
+routerAdd("POST", "/api/rpc/seed-categories", (c) => {
+  try {
+    const info = $apis.requestInfo(c);
+    const user = info.authRecord;
+    const names = (info.data && info.data.names) || [];
+    if (!Array.isArray(names) || !names.length) throw new Error("names[] is required");
+
+    const dao = $app.dao();
+    const PALETTE = ["#ef4444","#f97316","#eab308","#22c55e","#10b981","#14b8a6","#06b6d4","#0ea5e9","#3b82f6","#6366f1","#a855f7","#ec4899"];
+
+    // Existing names (case-insensitive) so we never create duplicates.
+    const existing = {};
+    dao.findRecordsByFilter("categories", "userId = {:u}", "-created", 5000, 0, { u: user.id })
+      .forEach(function (r) { existing[String(r.get("name")).toLowerCase()] = 1; });
+
+    const coll = dao.findCollectionByNameOrId("categories");
+    let created = 0;
+    for (let i = 0; i < names.length; i++) {
+      const name = String(names[i] || "").trim();
+      if (!name || existing[name.toLowerCase()]) continue;
+      const rec = new Record(coll);
+      rec.set("userId", user.id);
+      rec.set("name", name);
+      rec.set("color", PALETTE[created % PALETTE.length]);
+      dao.saveRecord(rec);
+      existing[name.toLowerCase()] = 1;
+      created++;
+    }
+    return c.json(200, { created: created });
+  } catch (err) {
+    return c.json(400, { error: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());
