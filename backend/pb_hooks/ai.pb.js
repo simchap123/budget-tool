@@ -75,3 +75,58 @@ routerAdd("POST", "/api/ai/suggest-category", (c) => {
     return c.json(200, { category: "", source: "error", detail: String((err && err.message) || err) });
   }
 }, $apis.requireRecordAuth());
+
+// POST /api/ai/insights  { summary }  ->  { narrative, habits: string[], source }
+//
+// The frontend computes the spending summary (totals, top categories, recurring,
+// savings rate) from the user's transactions and sends it here; we ask Gemini to
+// turn it into a short, encouraging read on the user's money trends and habits.
+// Purely additive: on any failure it returns empty strings so the onboarding
+// still shows its deterministic stats and budget suggestions.
+routerAdd("POST", "/api/ai/insights", (c) => {
+  try {
+    const info = $apis.requestInfo(c);
+    const summary = info.data.summary;
+    if (!summary) return c.json(200, { narrative: "", habits: [], source: "empty" });
+
+    const key = $os.getenv("GEMINI_API_KEY");
+    if (!key) return c.json(200, { narrative: "", habits: [], source: "no-key" });
+
+    const prompt =
+      "You are a warm, practical personal-finance coach. Using ONLY the JSON spending " +
+      "summary below, write a short 2-3 sentence overview of this person's money trends, " +
+      "then list 3 to 5 specific habits or patterns you notice (each a short phrase, no more " +
+      "than ~12 words). Be encouraging and concrete; never invent numbers not in the data. " +
+      'Return STRICT JSON only: {"narrative": string, "habits": string[]}. ' +
+      "Summary: " + JSON.stringify(summary);
+
+    const res = $http.send({
+      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+      method: "POST",
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4 },
+      }),
+      headers: { "Content-Type": "application/json" },
+      timeout: 30,
+    });
+
+    if (res.statusCode === 200 && res.json && res.json.candidates) {
+      let text = (res.json.candidates[0].content.parts[0].text || "").replace(/```json|```/g, "").trim();
+      try {
+        const parsed = JSON.parse(text);
+        return c.json(200, {
+          narrative: String(parsed.narrative || ""),
+          habits: Array.isArray(parsed.habits) ? parsed.habits.slice(0, 6).map(String) : [],
+          source: "ai",
+        });
+      } catch (e) {
+        // Model didn't return clean JSON — hand back the prose as the narrative.
+        return c.json(200, { narrative: text.slice(0, 600), habits: [], source: "ai-text" });
+      }
+    }
+    return c.json(200, { narrative: "", habits: [], source: "none" });
+  } catch (err) {
+    return c.json(200, { narrative: "", habits: [], source: "error", detail: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());

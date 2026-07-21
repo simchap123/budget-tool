@@ -1,4 +1,4 @@
-import { Landmark, Tags, HandHeart, LogOut, ChevronRight } from 'lucide-react'
+import { Landmark, Tags, HandHeart, LogOut, ChevronRight, Sparkles } from 'lucide-react'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { BankConnections } from '../components/BankConnections'
 
@@ -9,10 +9,12 @@ export function Settings({
   user,
   onNavigate,
   onLogout,
+  onStartSetup,
 }: {
   user: any
   onNavigate: (page: string) => void
   onLogout: () => void
+  onStartSetup?: () => void
 }) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
@@ -20,6 +22,21 @@ export function Settings({
         <h1 className="text-display-lg">Settings</h1>
         <p className="mt-2 text-ink-400">Banks, categories, and account</p>
       </div>
+
+      {/* Re-run the guided AI setup anytime. */}
+      {onStartSetup && (
+        <button
+          onClick={onStartSetup}
+          className="mt-6 flex w-full items-center gap-3 rounded-sm border border-accent-sunset/40 bg-accent-sunset/10 p-4 text-left transition-colors hover:bg-accent-sunset/15"
+        >
+          <Sparkles size={20} className="shrink-0 text-accent-sunset" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-ink-100">Set up with AI</span>
+            <span className="block text-body-sm text-ink-400">Analyze your spending and suggest budgets &amp; goals</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-ink-500" />
+        </button>
+      )}
 
       {/* Banks */}
       <section className="mt-8">

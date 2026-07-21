@@ -6,11 +6,11 @@ import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Budget } from './pages/Budget'
 import { Categories } from './pages/Categories'
-import { Analytics } from './pages/Analytics'
 import { Recurring } from './pages/Recurring'
 import { Giving } from './pages/Giving'
 import { Settings } from './pages/Settings'
 import { Header } from './components/Header'
+import { Onboarding } from './components/Onboarding'
 import { ToastProvider } from './components/ui/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initAnalytics, trackPageView } from './utils/analytics'
@@ -19,6 +19,12 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('home')
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // First-run AI setup shows once, then remembers it was dismissed/completed.
+  const maybeOnboard = () => {
+    if (!localStorage.getItem('bt_onboarded')) setShowOnboarding(true)
+  }
 
   useEffect(() => {
     // Check if user is logged in
@@ -35,6 +41,7 @@ export default function App() {
         new URLSearchParams(window.location.search).get('plaid') === 'done'
       setCurrentPage(returningFromPlaid ? 'settings' : 'dashboard')
       initAnalytics(userData.record?.id || 'anonymous')
+      if (!returningFromPlaid) maybeOnboard()
     }
     setLoading(false)
   }, [])
@@ -92,6 +99,8 @@ export default function App() {
               setUser(userData)
               initAnalytics(userData.record?.id || 'anonymous')
               setCurrentPage('dashboard')
+              // Brand-new accounts always get the guided AI setup.
+              setShowOnboarding(true)
             }}
             onLoginClick={() => setCurrentPage('login')}
           />
@@ -108,9 +117,6 @@ export default function App() {
         {currentPage === 'categories' && user && (
           <Categories />
         )}
-        {currentPage === 'analytics' && user && (
-          <Analytics />
-        )}
         {currentPage === 'recurring' && user && (
           <Recurring />
         )}
@@ -123,12 +129,19 @@ export default function App() {
           <Categories initialTab="vendors" />
         )}
         {currentPage === 'settings' && user && (
-          <Settings user={user} onNavigate={setCurrentPage} onLogout={handleLogout} />
+          <Settings user={user} onNavigate={setCurrentPage} onLogout={handleLogout} onStartSetup={() => setShowOnboarding(true)} />
         )}
         {currentPage === 'dashboard' && !user && (
           <Home onNavigate={setCurrentPage} />
         )}
       </main>
+
+      {showOnboarding && user && (
+        <Onboarding
+          onClose={() => setShowOnboarding(false)}
+          onNavigate={setCurrentPage}
+        />
+      )}
       </div>
     </ToastProvider>
     </ErrorBoundary>
