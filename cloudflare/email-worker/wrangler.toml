@@ -1,0 +1,10 @@
+name = "budget-email-ingest"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# This Worker is bound as the handler for the `transactions.grotketech.com`
+# Email Routing address in the Cloudflare dashboard (Email → Email Workers).
+#
+# Secrets (never commit these — set them after deploy):
+#   wrangler secret put INBOUND_HMAC_SECRET
+#   wrangler secret put INBOUND_WEBHOOK_URL

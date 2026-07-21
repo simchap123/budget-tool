@@ -3,6 +3,7 @@ import axios from 'axios'
 import { LogOut, ChevronRight } from 'lucide-react'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { BankConnections } from '../components/BankConnections'
+import { EmailImport } from '../components/EmailImport'
 import { useToast } from '../components/ui/Toast'
 import { runAutoCategorize } from '../utils/autoCategorize'
 import { invalidateCategories } from '../hooks/useCategories'
@@ -118,6 +119,16 @@ export function Settings({
         </div>
         {/* Renders nothing until at least one bank is linked. */}
         <BankConnections />
+      </section>
+
+      {/* Email import — capture transactions from forwarded bank alert emails. */}
+      <section className="mt-10">
+        <h2 className="text-lg font-normal text-ink-50">Email import</h2>
+        <p className="mt-1 text-body-sm text-ink-500">
+          Forward your bank / credit-card transaction alerts to a private address and
+          they become transactions automatically.
+        </p>
+        <EmailImport />
       </section>
 
       {/* Category detail level — switch the starter system anytime. Additive, so

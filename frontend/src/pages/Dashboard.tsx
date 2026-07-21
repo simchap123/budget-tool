@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Pencil, Trash2, Landmark, Tag } from 'lucide-react'
 import { SwipeableRow } from '../components/ui/SwipeableRow'
+import { NeedsReview } from '../components/NeedsReview'
 import { QuickCategorySheet } from '../components/ui/QuickCategorySheet'
 import { CSVImport } from '../components/CSVImport'
 import { UpcomingBills } from '../components/UpcomingBills'
@@ -329,6 +330,9 @@ export function Dashboard({ user }: { user: any }) {
 
       {/* Bank linking + connection management now live on Settings — the
           Dashboard is for reviewing spend, not one-off account setup. */}
+
+      {/* Email-captured transactions awaiting confirmation (hidden when none). */}
+      <NeedsReview onChange={fetchTransactions} />
 
       {/* Month Selector */}
       <div className="mt-6 flex items-center gap-2">
