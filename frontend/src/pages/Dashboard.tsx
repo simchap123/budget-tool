@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Pencil, Trash2, Landmark } from 'lucide-react'
+import { Pencil, Trash2, Landmark, Tag } from 'lucide-react'
+import { SwipeableRow } from '../components/ui/SwipeableRow'
+import { QuickCategorySheet } from '../components/ui/QuickCategorySheet'
 import { CSVImport } from '../components/CSVImport'
-import { PlaidConnect } from '../components/PlaidConnect'
 import { UpcomingBills } from '../components/UpcomingBills'
-import { BankConnections } from '../components/BankConnections'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
@@ -12,11 +12,16 @@ import { SkeletonTable } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { trackTransactionAction } from '../utils/analytics'
 import { monthRange, formatDate } from '../utils/dateRange'
-import { toCSV } from '../utils/csv'
 import { filterTransactions } from '../utils/search'
 import { reportTotals, txAmount } from '../utils/reportStats'
 import { CategorySelect } from '../components/ui/CategorySelect'
 import { useCategories, invalidateCategories } from '../hooks/useCategories'
+import { merchantKey } from '../utils/merchant'
+
+// The merchant a transaction rolls up to — the same normalized key the Vendors
+// page groups on — title-cased for display next to the category.
+const vendorName = (description: string) =>
+  merchantKey(description || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 
 export function Dashboard({ user }: { user: any }) {
   const toast = useToast()
@@ -34,6 +39,10 @@ export function Dashboard({ user }: { user: any }) {
   const [page, setPage] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
   const [search, setSearch] = useState('')
+  // Which mobile row is swiped open (only ever one), and which transaction the
+  // quick-category sheet is currently editing.
+  const [swipedId, setSwipedId] = useState<string | null>(null)
+  const [categorizing, setCategorizing] = useState<any | null>(null)
 
   useEffect(() => {
     fetchTransactions()
@@ -181,6 +190,34 @@ export function Dashboard({ user }: { user: any }) {
     }
   }
 
+  // Reassign a single transaction's category without opening the edit form.
+  // Optimistic: the row updates immediately and reverts if the write fails,
+  // because the whole point of this path is that it feels instant.
+  const handleQuickCategory = async (txn: any, category: string) => {
+    const previous = txn.category
+    setCategorizing(null)
+    setTransactions((prev: any) =>
+      prev.map((t: any) => (t.id === txn.id ? { ...t, category } : t))
+    )
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      await axios.patch(
+        `${apiUrl}/collections/transactions/records/${txn.id}`,
+        { category },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      )
+      trackTransactionAction('edit', txn.type)
+      invalidateCategories()
+    } catch (err: any) {
+      console.error('Quick category change failed:', err)
+      setTransactions((prev: any) =>
+        prev.map((t: any) => (t.id === txn.id ? { ...t, category: previous } : t))
+      )
+      toast.error('Could not change category')
+    }
+  }
+
   const handleEditTransaction = (txn: any) => {
     setEditingId(txn.id)
     setEditingOriginal({ category: txn.category || 'Uncategorized', description: txn.description || '' })
@@ -217,22 +254,15 @@ export function Dashboard({ user }: { user: any }) {
     }
   }
 
-  const handleExport = () => {
-    const rows = (transactions as any[]).map((t) => ({
-      Date: String(t.date || '').slice(0, 10),
-      Description: t.description,
-      Amount: txAmount(t).toFixed(2),
-      Type: t.type,
-      Category: t.category || 'Uncategorized',
-      Note: t.note || '',
-    }))
-    const csv = toCSV(rows, ['Date', 'Description', 'Amount', 'Type', 'Category', 'Note'])
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `budget-${selectedMonth}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleExport = async () => {
+    try {
+      const { downloadXlsx } = await import('../utils/xlsx')
+      const { transactionsSheet } = await import('../utils/reportExport')
+      await downloadXlsx([transactionsSheet(transactions as any[])], `budget-${selectedMonth}.xlsx`)
+    } catch (err) {
+      console.error('Export failed:', err)
+      toast.error('Could not generate the Excel file')
+    }
   }
 
   // Same tested money math as Reports (single source of truth for summing amounts).
@@ -241,6 +271,9 @@ export function Dashboard({ user }: { user: any }) {
   // Search filters the displayed list (monthly totals above stay for the month).
   const filtered = filterTransactions(transactions as any[], search)
   const totalPages = Math.max(1, Math.ceil(filtered.length / 25))
+  // Shared by the mobile card list and the desktop table so the two views
+  // can never drift out of sync on paging.
+  const pageRows = filtered.slice((page - 1) * 25, page * 25)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
@@ -249,8 +282,8 @@ export function Dashboard({ user }: { user: any }) {
         <p className="mt-2 text-ink-400">Welcome back, {user.name || user.email}</p>
       </div>
 
-      {/* Connected banks: reconnect if flagged, or disconnect */}
-      <BankConnections onSynced={fetchTransactions} />
+      {/* Bank linking + connection management now live on Settings — the
+          Dashboard is for reviewing spend, not one-off account setup. */}
 
       {/* Month Selector */}
       <div className="mt-6 flex items-center gap-2">
@@ -268,17 +301,17 @@ export function Dashboard({ user }: { user: any }) {
 
       {/* Stats */}
       <div className="mt-8 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <p className="text-body-sm text-ink-400">Total Income</p>
-          <p className="mt-2 text-3xl font-normal text-accent-sunset">${stats.income.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-sunset">${stats.income.toFixed(2)}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <p className="text-body-sm text-ink-400">Total Expenses</p>
-          <p className="mt-2 text-3xl font-normal text-accent-dusk">${stats.expenses.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-dusk">${stats.expenses.toFixed(2)}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <p className="text-body-sm text-ink-400">Net Income</p>
-          <p className="mt-2 text-3xl font-normal text-accent-breeze">${stats.net.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-breeze">${stats.net.toFixed(2)}</p>
         </div>
       </div>
 
@@ -287,29 +320,31 @@ export function Dashboard({ user }: { user: any }) {
 
       {/* Add Transaction Form */}
       <div className="mt-12">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-display-sm">Transactions</h2>
-          <div className="flex flex-wrap gap-2">
+          {/* On phones these are an even 2-up grid rather than free-wrapping
+              pills, which left a ragged single button orphaned on its own row.
+              The primary action spans the full width above the secondaries. */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
             <button
               onClick={() => setFormOpen(!formOpen)}
-              className="btn-primary py-2 px-4"
+              className="btn-primary col-span-2 px-4 sm:col-span-1"
             >
               {formOpen ? 'Cancel' : '+ Add Transaction'}
             </button>
-            <PlaidConnect onSynced={fetchTransactions} />
             <button
               onClick={() => setImportOpen(!importOpen)}
-              className="btn-secondary py-2 px-4"
+              className="btn-secondary px-4"
             >
               {importOpen ? 'Cancel' : '📤 Import CSV'}
             </button>
             {transactions.length > 0 && (
               <button
                 onClick={handleExport}
-                className="btn-secondary py-2 px-4"
+                className="btn-secondary px-4"
                 title="Download this month's transactions as CSV"
               >
-                ⬇ Export
+                ⬇ Export Excel
               </button>
             )}
           </div>
@@ -451,19 +486,79 @@ export function Dashboard({ user }: { user: any }) {
                 No transactions match &ldquo;{search}&rdquo;.
               </div>
             ) : (
-          <div className="mt-4 overflow-x-auto rounded-sm border border-ink-700">
+          <>
+          {/* Mobile: a swipeable card list. A horizontally-scrolling table
+              would fight the swipe gesture, so phones get cards and pointer
+              devices keep the denser table below. */}
+          <div className="mt-4 card divide-y divide-ink-700 overflow-hidden sm:hidden">
+            {pageRows.map((txn: any) => (
+              <SwipeableRow
+                key={txn.id}
+                open={swipedId === txn.id}
+                onOpenChange={(o) => setSwipedId(o ? txn.id : null)}
+                actions={[
+                  {
+                    label: 'Category',
+                    icon: <Tag size={16} />,
+                    onClick: () => setCategorizing(txn),
+                    className: 'bg-accent-sunset',
+                  },
+                  {
+                    label: 'Delete',
+                    icon: <Trash2 size={16} />,
+                    onClick: () => setShowDeleteConfirm(txn.id),
+                    className: 'bg-accent-dusk',
+                  },
+                ]}
+              >
+                <div className="flex items-center gap-3 p-3">
+                  <button
+                    onClick={() => handleEditTransaction(txn)}
+                    className="min-w-0 flex-1 text-left"
+                    aria-label={`Edit ${txn.description || 'transaction'}`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-ink-100">{txn.description}</span>
+                      {txn.plaidId && (
+                        <Landmark size={12} className="shrink-0 text-accent-breeze" aria-label="Synced from your bank" />
+                      )}
+                    </span>
+                    <span className="mt-0.5 block truncate text-body-sm text-ink-500">
+                      {formatDate(txn.date)} · {vendorName(txn.description)}
+                    </span>
+                  </button>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
+                      {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toFixed(2)}
+                    </span>
+                    {/* Tappable chip — the non-gesture path to recategorizing. */}
+                    <button
+                      onClick={() => setCategorizing(txn)}
+                      className="max-w-[10rem] truncate rounded-pill bg-canvas-soft px-2 py-1 text-body-sm text-ink-400 transition-colors active:bg-ink-700"
+                      aria-label={`Change category, currently ${txn.category || 'Uncategorized'}`}
+                    >
+                      {txn.category || 'Uncategorized'}
+                    </button>
+                  </div>
+                </div>
+              </SwipeableRow>
+            ))}
+          </div>
+
+          <div className="mt-4 hidden table-scroll sm:block">
             <table className="table-minimal">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Description</th>
+                  <th>Vendor</th>
                   <th>Category</th>
                   <th className="text-right">Amount</th>
                   <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice((page - 1) * 25, page * 25).map((txn: any) => (
+                {pageRows.map((txn: any) => (
                   <tr key={txn.id}>
                     <td className="text-ink-300">
                       {formatDate(txn.date)}
@@ -481,31 +576,48 @@ export function Dashboard({ user }: { user: any }) {
                         <span className="block text-body-sm text-ink-500 italic">{txn.note}</span>
                       )}
                     </td>
-                    <td className="text-ink-400">{txn.category || 'Uncategorized'}</td>
+                    <td className="text-ink-400">{vendorName(txn.description)}</td>
+                    <td>
+                      <button
+                        onClick={() => setCategorizing(txn)}
+                        className="rounded-sm px-2 py-1 text-ink-400 underline decoration-dotted decoration-ink-600 underline-offset-4 transition-colors hover:bg-canvas-soft hover:text-ink-200"
+                        title="Change category"
+                      >
+                        {txn.category || 'Uncategorized'}
+                      </button>
+                    </td>
                     <td className="text-right">
                       <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
                         {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toFixed(2)}
                       </span>
                     </td>
-                    <td className="text-right space-x-1 sm:space-x-2 flex flex-col sm:flex-row justify-end gap-1 sm:gap-2">
-                      <button
-                        onClick={() => handleEditTransaction(txn)}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-body-sm font-normal bg-accent-sunset text-canvas rounded hover:bg-accent-sunset-soft transition-colors min-h-[32px]"
-                      >
-                        <Pencil size={14} /> Edit
-                      </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(txn.id)}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-body-sm font-normal bg-accent-dusk text-canvas rounded hover:bg-purple-700 transition-colors min-h-[32px]"
-                      >
-                        <Trash2 size={14} /> Delete
-                      </button>
+                    {/* The flex row lives in a wrapper div — putting display:flex
+                        on the <td> itself drops it out of the table layout and
+                        misaligns the whole row. */}
+                    <td className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEditTransaction(txn)}
+                          aria-label={`Edit ${txn.description || 'transaction'}`}
+                          className="inline-flex items-center justify-center gap-1 min-h-touch px-3 text-body-sm font-normal bg-accent-sunset text-canvas rounded hover:bg-accent-sunset-soft transition-colors"
+                        >
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(txn.id)}
+                          aria-label={`Delete ${txn.description || 'transaction'}`}
+                          className="inline-flex items-center justify-center gap-1 min-h-touch px-3 text-body-sm font-normal bg-accent-dusk text-canvas rounded hover:bg-purple-700 transition-colors"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
             )}
           </>
         )}
@@ -538,6 +650,16 @@ export function Dashboard({ user }: { user: any }) {
           Are you sure you want to delete this transaction? This cannot be undone.
         </p>
       </Modal>
+
+      {categorizing && (
+        <QuickCategorySheet
+          current={categorizing.category || 'Uncategorized'}
+          categories={categories}
+          title={categorizing.description || 'Transaction'}
+          onPick={(c) => handleQuickCategory(categorizing, c)}
+          onClose={() => setCategorizing(null)}
+        />
+      )}
     </div>
   )
 }

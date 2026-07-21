@@ -142,7 +142,7 @@ export function Signup({
             Already have an account?{' '}
             <button
               onClick={onLoginClick}
-              className="font-normal text-accent-sunset hover:text-accent-sunset-soft"
+              className="inline-flex min-h-touch items-center font-normal text-accent-sunset hover:text-accent-sunset-soft"
             >
               Sign in
             </button>

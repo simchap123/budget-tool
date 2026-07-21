@@ -56,20 +56,22 @@ export function TransactionsModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 pad-safe-b animate-overlay-in sm:items-center"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="card max-w-lg w-full max-h-[85vh] flex flex-col animate-scale-in">
-        <div className="flex items-center justify-between gap-3 p-5 border-b border-ink-700 shrink-0">
+      <div className="card animate-sheet-up sm:animate-scale-in w-full max-w-lg max-h-[85dvh] flex flex-col">
+        <div className="flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-ink-700 shrink-0">
           <div className="min-w-0">
             <h2 className="text-lg font-normal text-ink-50 truncate">{title}</h2>
-            {subtitle && <p className="text-body-sm text-ink-400">{subtitle}</p>}
+            {subtitle && <p className="text-body-sm text-ink-400 truncate">{subtitle}</p>}
           </div>
-          <button onClick={onClose} aria-label="Close" className="shrink-0 text-ink-400 hover:text-ink-200 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="btn-icon shrink-0 -mr-2">
             <X size={20} />
           </button>
         </div>
-        <div className="p-5 overflow-y-auto">
+        <div className="p-4 sm:p-5 overflow-y-auto scroll-contain">
           {txns === null ? (
             <p className="text-ink-400">Loading…</p>
           ) : txns.length === 0 ? (

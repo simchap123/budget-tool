@@ -3,8 +3,62 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    /* Stop mobile browsers auto-inflating text (and re-flowing on rotate),
+       which is a common source of "the app looks randomly zoomed". */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-canvas text-ink-50;
+    /* Safety net: nothing should bleed horizontally. Any element that wants to
+       scroll sideways (tables, chart rows) owns its own overflow container. */
+    overflow-x: hidden;
+  }
+
+  /* Touch devices never fire :hover, so a tap otherwise gives no feedback at
+     all until the network responds. A quick scale-down on :active makes every
+     control feel like it registered instantly. */
+  @media (pointer: coarse) {
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    a {
+      transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 120ms ease-out;
+    }
+
+    button:not(:disabled):active,
+    [role='button']:not([aria-disabled='true']):active,
+    a:active {
+      transform: scale(0.96);
+    }
+
+    /* Cards that are themselves tappable get a subtler press. */
+    .card:active {
+      transform: scale(0.99);
+    }
+  }
+
+  /* Kill the grey flash Android/iOS paint over tapped elements — the :active
+     transform above replaces it with something intentional. */
+  button,
+  a,
+  [role='button'],
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS Safari zooms the viewport whenever a focused field renders below 16px.
+     Form controls default to ~13px, so pin them to 16px on touch-primary
+     devices and let the design use its smaller size on mouse-driven ones. */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 
   h1 {
@@ -33,20 +87,27 @@
 }
 
 @layer components {
+  /* All buttons clear the 44px touch minimum. inline-flex + centering keeps
+     them from growing taller than their text when min-height kicks in. */
   .btn-primary {
-    @apply rounded-pill bg-accent-sunset px-4 py-2 font-normal text-canvas hover:bg-accent-sunset-soft transition-colors disabled:opacity-50;
+    @apply inline-flex items-center justify-center min-h-touch rounded-pill bg-accent-sunset px-4 py-2 font-normal text-canvas hover:bg-accent-sunset-soft transition-colors disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply rounded-pill border-2 border-accent-sunset bg-transparent px-4 py-2 font-normal text-accent-sunset hover:bg-accent-sunset hover:text-canvas transition-colors disabled:opacity-50;
+    @apply inline-flex items-center justify-center min-h-touch rounded-pill border-2 border-accent-sunset bg-transparent px-4 py-2 font-normal text-accent-sunset hover:bg-accent-sunset hover:text-canvas transition-colors disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply rounded-pill bg-accent-dusk px-4 py-2 font-normal text-canvas hover:bg-purple-700 transition-colors disabled:opacity-50;
+    @apply inline-flex items-center justify-center min-h-touch rounded-pill bg-accent-dusk px-4 py-2 font-normal text-canvas hover:bg-purple-700 transition-colors disabled:opacity-50;
+  }
+
+  /* Square icon-only control that still meets the touch minimum. */
+  .btn-icon {
+    @apply inline-flex items-center justify-center min-h-touch min-w-touch rounded-sm text-ink-400 hover:text-ink-200 hover:bg-canvas-soft transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .input-base {
-    @apply block w-full rounded-sm border border-ink-500 bg-canvas-soft px-3 py-2 text-ink-50 placeholder-ink-600 focus:border-accent-sunset focus:outline-none focus:ring-2 focus:ring-accent-sunset focus:ring-offset-2 focus:ring-offset-canvas transition-colors;
+    @apply block w-full min-h-touch rounded-sm border border-ink-500 bg-canvas-soft px-3 py-2 text-ink-50 placeholder-ink-600 focus:border-accent-sunset focus:outline-none focus:ring-2 focus:ring-accent-sunset focus:ring-offset-2 focus:ring-offset-canvas transition-colors;
   }
 
   .card {
@@ -73,12 +134,15 @@
     @apply inline-flex items-center rounded-pill bg-accent-dusk bg-opacity-10 px-3 py-1 text-sm font-normal text-accent-twilight;
   }
 
+  /* w-full alone made tables shrink to the phone's width and crush every
+     column into unreadable wrapped text. The min-width makes the wrapping
+     table-scroll container actually scroll instead. */
   .table-minimal {
-    @apply w-full text-body-sm;
+    @apply w-full min-w-[38rem] text-body-sm;
   }
 
   .table-minimal th {
-    @apply border-b border-ink-700 bg-canvas-card px-4 py-3 text-left font-normal text-ink-200;
+    @apply whitespace-nowrap border-b border-ink-700 bg-canvas-card px-4 py-3 text-left font-normal text-ink-200;
   }
 
   .table-minimal td {
@@ -115,11 +179,47 @@
   .page-enter {
     @apply animate-fade-in;
   }
+
+  /* Wrapper for wide tables: scrolls horizontally with iOS momentum, and
+     hints that there is more content off to the right. */
+  .table-scroll {
+    @apply overflow-x-auto rounded-sm border border-ink-700;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  /* Scroll areas inside dialogs shouldn't chain their scroll to the page
+     behind them — that "scrolls the wrong thing" feeling on touch. */
+  .scroll-contain {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer utilities {
+  /* Keep content clear of notches, rounded corners and the home indicator. */
+  .pad-safe-x {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .pad-safe-b {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Also drop the press/sheet transforms, not just their duration. */
+  button:active,
+  a:active,
+  [role='button']:active,
+  .card:active {
+    transform: none !important;
   }
 }

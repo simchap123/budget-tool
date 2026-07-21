@@ -53,7 +53,7 @@ export function Recurring() {
 
       <div className="mt-8 card p-6">
         <p className="text-body-sm text-ink-400">Estimated monthly recurring</p>
-        <p className="mt-1 text-3xl font-normal text-accent-dusk">${monthlyTotal.toFixed(2)}</p>
+        <p className="mt-1 text-2xl sm:text-3xl font-normal text-accent-dusk">${monthlyTotal.toFixed(2)}</p>
         <p className="mt-1 text-body-sm text-ink-500">
           {items.length} recurring merchant{items.length === 1 ? '' : 's'} · ~${(monthlyTotal * 12).toFixed(0)}/yr
         </p>

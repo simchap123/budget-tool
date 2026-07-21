@@ -254,7 +254,7 @@ export function Budget() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-display-lg">Budget</h1>
           <p className="mt-2 text-ink-400">
@@ -264,7 +264,9 @@ export function Budget() {
             Budgets carry forward every month — set them once.
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        {/* wrap, don't shrink-0: two full-width buttons side by side were
+            575px wide and forced the whole page to scroll sideways. */}
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
           <button
             onClick={handleSuggestBudgets}
             disabled={suggesting}
@@ -326,11 +328,11 @@ export function Budget() {
 
       {/* Month Navigator */}
       <div className="mt-6 flex items-center justify-center gap-4">
-        <button onClick={handlePrevMonth} aria-label="Previous month" className="p-2 hover:bg-ink-700 rounded transition-colors">
+        <button onClick={handlePrevMonth} aria-label="Previous month" className="btn-icon">
           <ChevronLeft size={20} />
         </button>
-        <span className="text-lg font-normal min-w-[200px] text-center">{monthYear}</span>
-        <button onClick={handleNextMonth} aria-label="Next month" className="p-2 hover:bg-ink-700 rounded transition-colors">
+        <span className="text-lg font-normal min-w-[9rem] sm:min-w-[200px] text-center">{monthYear}</span>
+        <button onClick={handleNextMonth} aria-label="Next month" className="btn-icon">
           <ChevronRight size={20} />
         </button>
       </div>
@@ -340,15 +342,15 @@ export function Budget() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <p className="text-body-sm text-ink-400">Budgeted</p>
-            <p className="mt-1 text-2xl font-normal text-accent-sunset">${totalBudgeted.toFixed(2)}</p>
+            <p className="mt-1 text-xl sm:text-2xl font-normal text-accent-sunset break-words">${totalBudgeted.toFixed(2)}</p>
           </div>
           <div>
             <p className="text-body-sm text-ink-400">Spent</p>
-            <p className="mt-1 text-2xl font-normal text-accent-dusk">${totalSpent.toFixed(2)}</p>
+            <p className="mt-1 text-xl sm:text-2xl font-normal text-accent-dusk break-words">${totalSpent.toFixed(2)}</p>
           </div>
           <div>
             <p className="text-body-sm text-ink-400">Remaining</p>
-            <p className={`mt-1 text-2xl font-normal ${remaining >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>
+            <p className={`mt-1 text-xl sm:text-2xl font-normal break-words ${remaining >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>
               ${Math.abs(remaining).toFixed(2)}
             </p>
           </div>

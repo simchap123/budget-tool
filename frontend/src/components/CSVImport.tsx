@@ -142,7 +142,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
   }
 
   return (
-    <div className="card p-6">
+    <div className="card p-4 sm:p-6">
       <h3 className="text-lg font-normal text-ink-50 mb-4">Import Transactions from CSV</h3>
 
 
@@ -183,7 +183,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
         {preview.length > 0 && (
           <div>
             <p className="text-body-sm text-ink-300 mb-2">Preview — what will be imported (first 5):</p>
-            <div className="overflow-x-auto rounded-sm border border-ink-700 bg-canvas-card">
+            <div className="table-scroll bg-canvas-card">
               <table className="table-minimal w-full">
                 <thead>
                   <tr>

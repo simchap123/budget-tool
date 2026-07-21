@@ -53,11 +53,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* Toast Stack */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+      {/* Full-width above the home indicator on phones; a corner stack from
+          sm up. A 200px-wide toast in a phone corner truncates constantly. */}
+      <div className="fixed inset-x-4 bottom-4 z-50 space-y-2 pad-safe-b sm:inset-x-auto sm:right-4">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`animate-fade-in rounded-sm border p-4 text-body-sm flex items-center justify-between gap-3 max-w-sm ${
+            role="status"
+            className={`animate-toast-in rounded-sm border p-4 text-body-sm flex items-center justify-between gap-3 shadow-lg shadow-black/40 sm:max-w-sm ${
               t.type === 'error'
                 ? 'border-red-700 bg-red-500/10 text-red-400'
                 : t.type === 'success'
@@ -68,7 +71,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <span>{t.message}</span>
             <button
               onClick={() => removeToast(t.id)}
-              className="text-current opacity-60 hover:opacity-100 transition-opacity"
+              aria-label="Dismiss notification"
+              className="-my-2 -mr-2 inline-flex min-h-touch min-w-touch shrink-0 items-center justify-center text-current opacity-60 hover:opacity-100 transition-opacity"
             >
               <X size={16} />
             </button>

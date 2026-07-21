@@ -7,7 +7,7 @@ import { useToast } from './ui/Toast'
 // handles the whole flow (including Chase OAuth) with no embedded JS or cache
 // issues. Plaid delivers the result via webhook (backend exchanges + syncs);
 // on return we poll /sync until the new transactions land.
-export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
+export function PlaidConnect({ onSynced }: { onSynced?: () => void }) {
   const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [chaseDegraded, setChaseDegraded] = useState(false)
@@ -59,7 +59,7 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
       if (now > lastCount) {
         lastCount = now
         quiet = 0
-        onSynced() // refresh the dashboard as batches land
+        onSynced?.() // refresh the dashboard as batches land
       } else {
         quiet++
       }
@@ -75,7 +75,7 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
     if (total > 0) toast.success(`Imported ${total} transactions`)
     else if (connected) toast.info('Bank connected. Your transactions are still importing and will appear shortly.')
     else toast.error("The bank connection didn't finish. Please try Connect Bank again.")
-    onSynced()
+    onSynced?.()
     setLoading(false)
   }
 
@@ -95,11 +95,13 @@ export function PlaidConnect({ onSynced }: { onSynced: () => void }) {
   }
 
   return (
-    <div className="inline-flex flex-col items-start gap-1">
+    /* w-full so this fills its grid cell on mobile and lines up with the
+       sibling action buttons; sm:w-auto restores the inline pill on desktop. */
+    <div className="flex w-full flex-col items-start gap-1 sm:inline-flex sm:w-auto">
       <button
         onClick={connect}
         disabled={loading}
-        className="btn-secondary py-2 px-4 inline-flex items-center gap-2 disabled:opacity-50"
+        className="btn-secondary w-full px-4 inline-flex items-center justify-center gap-2 disabled:opacity-50 sm:w-auto"
       >
         <Landmark size={16} /> {loading ? 'Connecting…' : 'Connect Bank'}
       </button>

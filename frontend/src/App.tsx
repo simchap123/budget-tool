@@ -9,7 +9,7 @@ import { Categories } from './pages/Categories'
 import { Analytics } from './pages/Analytics'
 import { Recurring } from './pages/Recurring'
 import { Giving } from './pages/Giving'
-import { Vendors } from './pages/Vendors'
+import { Settings } from './pages/Settings'
 import { Header } from './components/Header'
 import { ToastProvider } from './components/ui/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -28,7 +28,12 @@ export default function App() {
       // pb_auth stores the full auth response { token, record }. Login/Signup pass
       // the record directly, so normalize to the record for a consistent shape.
       setUser(userData.record || userData)
-      setCurrentPage('dashboard')
+      // Plaid redirects back with ?plaid=done. PlaidConnect polls for the
+      // incoming history on mount, and it only lives on Settings now — so land
+      // there rather than the Dashboard, or the import would never be watched.
+      const returningFromPlaid =
+        new URLSearchParams(window.location.search).get('plaid') === 'done'
+      setCurrentPage(returningFromPlaid ? 'settings' : 'dashboard')
       initAnalytics(userData.record?.id || 'anonymous')
     }
     setLoading(false)
@@ -56,14 +61,20 @@ export default function App() {
     <ErrorBoundary>
     <ToastProvider>
       <div className="min-h-screen bg-canvas">
-        <Header
-          user={user}
-          currentPage={currentPage}
-          onNavigate={setCurrentPage}
-          onLogout={handleLogout}
-        />
+        {/* The nav header is for signed-in app use. The marketing/auth pages
+            (home, login, signup) carry their own CTAs, so rendering the header
+            there just duplicated the Sign In / Get Started actions. */}
+        {user && (
+          <Header
+            user={user}
+            currentPage={currentPage}
+            onNavigate={setCurrentPage}
+            onLogout={handleLogout}
+          />
+        )}
 
-        <main>
+        {/* Extra bottom padding leaves room for the mobile bottom nav. */}
+        <main className={user ? 'pb-24 lg:pb-0' : ''}>
         {currentPage === 'home' && <Home onNavigate={setCurrentPage} />}
         {currentPage === 'login' && (
           <Login
@@ -106,8 +117,13 @@ export default function App() {
         {currentPage === 'giving' && user && (
           <Giving />
         )}
+        {/* 'vendors' now opens the merged Categories & Vendors page on its
+            Vendors tab, so old links and the bottom-nav still resolve. */}
         {currentPage === 'vendors' && user && (
-          <Vendors />
+          <Categories initialTab="vendors" />
+        )}
+        {currentPage === 'settings' && user && (
+          <Settings user={user} onNavigate={setCurrentPage} onLogout={handleLogout} />
         )}
         {currentPage === 'dashboard' && !user && (
           <Home onNavigate={setCurrentPage} />

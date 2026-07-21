@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
-import { Store, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { CategorySelect } from '../components/ui/CategorySelect'
 import { useCategories } from '../hooks/useCategories'
@@ -19,7 +19,8 @@ const PAGE = 60
 // Vendors: the merchant layer. Every transaction rolls up to a vendor (matched on
 // the normalized merchant key), and a vendor carries a category — so changing a
 // vendor's category re-files every transaction from that merchant at once.
-export function Vendors() {
+// Rendered as a panel (no page chrome) inside the Categories & Vendors page.
+export function VendorsPanel() {
   const toast = useToast()
   const categories = useCategories()
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -79,20 +80,14 @@ export function Vendors() {
   }
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center"><div className="text-lg text-ink-400">Loading vendors…</div></div>
+    return <div className="py-12 text-center text-ink-400">Loading vendors…</div>
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-accent-twilight/15 text-accent-twilight"><Store size={22} /></div>
-          <div>
-            <h1 className="text-display-lg">Vendors</h1>
-            <p className="mt-1 text-ink-400">{vendors.length} merchants · set a category once and every transaction from it follows</p>
-          </div>
-        </div>
-        <button onClick={rebuild} disabled={rebuilding} className="btn-secondary py-2 px-3 flex items-center gap-2 disabled:opacity-50" title="Regenerate from transactions">
+    <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-ink-400">{vendors.length} merchants · set a category once and every transaction from it follows</p>
+        <button onClick={rebuild} disabled={rebuilding} className="btn-secondary self-start px-3 flex items-center gap-2 disabled:opacity-50 sm:shrink-0" title="Regenerate from transactions">
           <RefreshCw size={16} className={rebuilding ? 'animate-spin' : ''} /> {rebuilding ? 'Rebuilding…' : 'Rebuild'}
         </button>
       </div>
@@ -102,7 +97,7 @@ export function Vendors() {
         value={search}
         onChange={(e) => { setSearch(e.target.value); setShown(PAGE) }}
         placeholder="Search vendors…"
-        className="input-base mt-6 w-full"
+        className="input-base mt-4 w-full"
         aria-label="Search vendors"
       />
 

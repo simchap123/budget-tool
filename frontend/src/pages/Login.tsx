@@ -87,7 +87,7 @@ export function Login({
             Don't have an account?{' '}
             <button
               onClick={onSignupClick}
-              className="font-normal text-accent-sunset hover:text-accent-sunset-soft"
+              className="inline-flex min-h-touch items-center font-normal text-accent-sunset hover:text-accent-sunset-soft"
             >
               Create one
             </button>

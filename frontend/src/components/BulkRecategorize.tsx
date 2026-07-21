@@ -68,7 +68,7 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
   }
 
   return (
-    <div className="card p-6">
+    <div className="card p-4 sm:p-6">
       <div className="flex items-center gap-2 mb-1">
         <Wand2 size={18} className="text-accent-twilight" />
         <h3 className="text-lg font-normal text-ink-50">Bulk recategorize</h3>

@@ -33,26 +33,30 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 pad-safe-b animate-overlay-in sm:items-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="card max-w-sm w-full animate-scale-in">
-        <div className="flex items-center justify-between p-6 border-b border-ink-700">
-          <h2 className="text-lg font-normal text-ink-50">{title}</h2>
+      {/* max-h + flex column so a tall body scrolls inside the dialog rather
+          than running off the bottom of the phone screen with no way back. */}
+      <div className="card animate-sheet-up sm:animate-scale-in w-full max-w-sm max-h-[85dvh] flex flex-col">
+        <div className="flex items-center justify-between gap-3 p-4 sm:p-6 border-b border-ink-700 shrink-0">
+          <h2 className="text-lg font-normal text-ink-50 min-w-0">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="text-ink-400 hover:text-ink-200 transition-colors"
+            className="btn-icon shrink-0 -mr-2"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto scroll-contain">{children}</div>
 
-        {footer && <div className="border-t border-ink-700 p-6">{footer}</div>}
+        {footer && <div className="border-t border-ink-700 p-4 sm:p-6 shrink-0">{footer}</div>}
       </div>
     </div>,
     document.body

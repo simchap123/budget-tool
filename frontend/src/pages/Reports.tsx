@@ -1,347 +1,476 @@
-import { useState, useEffect } from 'react'
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { TrendingUp, TrendingDown, DollarSign, Percent, ChevronLeft, ChevronRight } from 'lucide-react'
-import { monthRange, monthLabel, shiftMonth } from '../utils/dateRange'
-import { categorySpendingTrend, TrendPoint } from '../utils/categoryTrend'
-import { reportTotals, categoryBreakdown, monthlyTrend } from '../utils/reportStats'
+import { useState, useEffect, useMemo } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
+import { DollarSign, TrendingUp, TrendingDown, Percent, Download } from 'lucide-react'
+import { reportTotals, txAmount } from '../utils/reportStats'
 import { fetchAllRecords } from '../utils/fetchAll'
-import { TransactionsModal } from '../components/ui/TransactionsModal'
+import { groupTransactions, rowMatcher, GroupBy, ValueType } from '../utils/reportEngine'
+import { resolveRange, RANGE_OPTIONS, RangePreset, yearsInRange } from '../utils/reportRange'
+import { TxnListModal } from '../components/ui/TxnListModal'
+import { downloadXlsx } from '../utils/xlsx'
+import { buildReportSheets, buildBudgetSheets } from '../utils/reportExport'
+import { useToast } from '../components/ui/Toast'
+
+type Grouping = GroupBy | 'budget'
+
+const GROUP_OPTIONS: { value: Grouping; label: string }[] = [
+  { value: 'category', label: 'Category' },
+  { value: 'vendor', label: 'Vendor' },
+  { value: 'month', label: 'Month' },
+  { value: 'year', label: 'Year' },
+  { value: 'budget', label: 'Budget vs actual' },
+]
+
+const VALUE_OPTIONS: { value: ValueType; label: string }[] = [
+  { value: 'expense', label: 'Spending' },
+  { value: 'income', label: 'Income' },
+  { value: 'net', label: 'Net' },
+]
+
+const COLORS = ['#f97316', '#06b6d4', '#10b981', '#eab308', '#a855f7', '#ec4899', '#3b82f6', '#f59e0b', '#84cc16', '#14b8a6', '#f43f5e', '#8b5cf6']
+const CHART_LIMIT = 12
+
+const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`
+
+// How many calendar months a range covers — used to scale monthly budgets (which
+// carry forward) up to the selected window for a fair budget-vs-actual compare.
+function monthsInRange(start: string, endExclusive: string, txns: any[]): number {
+  if (start && endExclusive) {
+    const [sy, sm] = start.split('-').map(Number)
+    const [ey, em, ed] = endExclusive.split('-').map(Number)
+    const last = new Date(ey, em - 1, ed - 1) // last included day
+    const months = last.getFullYear() * 12 + last.getMonth() - (sy * 12 + (sm - 1)) + 1
+    return Math.max(1, months)
+  }
+  // Unbounded (all-time): count distinct months that actually have transactions.
+  const set = new Set(txns.map((t) => String(t.date || '').slice(0, 7)).filter((x) => x.length === 7))
+  return Math.max(1, set.size)
+}
 
 export function Reports() {
   const [transactions, setTransactions] = useState<any[]>([])
+  const [budgets, setBudgets] = useState<{ category: string; budgetAmount: number }[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterType, setFilterType] = useState<'month' | 'year'>('month')
-  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7))
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
-  const [catTrend, setCatTrend] = useState<{ data: TrendPoint[]; categories: string[] }>({ data: [], categories: [] })
-  const [drill, setDrill] = useState<string | null>(null)
+
+  const [groupBy, setGroupBy] = useState<Grouping>('category')
+  const [valueType, setValueType] = useState<ValueType>('expense')
+  const [preset, setPreset] = useState<RangePreset>('this-month')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+
+  const [drill, setDrill] = useState<{ title: string; subtitle: string; txns: any[] } | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const toast = useToast()
+
+  const range = useMemo(
+    () => resolveRange(preset, new Date(), customStart, customEnd),
+    [preset, customStart, customEnd]
+  )
 
   useEffect(() => {
-    fetchTransactions()
-  }, [filterType, currentMonth, currentYear])
+    const load = async () => {
+      try {
+        setLoading(true)
+        const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+        const apiUrl = import.meta.env.VITE_API_URL || '/api'
+        const headers = { Authorization: `Bearer ${auth.token}` }
 
-  // Independent of the month/year filter: 6-month category spending trend.
+        const query =
+          range.start && range.endExclusive
+            ? `filter=${encodeURIComponent(`(date>='${range.start}'&&date<'${range.endExclusive}')`)}&sort=-date`
+            : `sort=-date`
+        const items = await fetchAllRecords(apiUrl, 'transactions', query, headers)
+        setTransactions(items)
+      } catch (err) {
+        console.error('Error loading report data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [range.start, range.endExclusive])
+
+  // Budgets are range-independent (one per category, carrying forward), so load once.
   useEffect(() => {
-    const loadTrend = async () => {
+    const load = async () => {
       try {
         const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
         const apiUrl = import.meta.env.VITE_API_URL || '/api'
-        const since = new Date()
-        since.setMonth(since.getMonth() - 5)
-        const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-01`
-        const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
-        const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${filter}&sort=date`, {
-          Authorization: `Bearer ${auth.token}`,
-        })
-        setCatTrend(categorySpendingTrend(items, 5))
+        const items = await fetchAllRecords(apiUrl, 'budgets', 'perPage=500', { Authorization: `Bearer ${auth.token}` })
+        // Dedup by category, keeping the most recent (mirrors the Budget page).
+        const byCat: Record<string, any> = {}
+        for (const b of items) {
+          const key = (b.category || 'Uncategorized').toLowerCase()
+          if (!byCat[key] || String(b.created || '') > String(byCat[key].created || '')) byCat[key] = b
+        }
+        setBudgets(Object.values(byCat).map((b: any) => ({ category: b.category || 'Uncategorized', budgetAmount: Number(b.budgetAmount) || 0 })))
       } catch {
-        /* best-effort */
+        /* budgets are optional */
       }
     }
-    loadTrend()
+    load()
   }, [])
 
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true)
-      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
-      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+  const totals = reportTotals(transactions)
+  const isBudget = groupBy === 'budget'
 
-      let filter = ''
-      if (filterType === 'month') {
-        const { start, endExclusive } = monthRange(currentMonth)
-        filter = `(date>='${start}'&&date<'${endExclusive}')`
-      } else {
-        const yearStart = `${currentYear}-01-01`
-        const yearEndExclusive = `${currentYear + 1}-01-01`
-        filter = `(date>='${yearStart}'&&date<'${yearEndExclusive}')`
-      }
+  const grouped = useMemo(
+    () => (isBudget ? { rows: [], total: 0 } : groupTransactions(transactions, groupBy as GroupBy, valueType)),
+    [transactions, groupBy, valueType, isBudget]
+  )
 
-      const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${encodeURIComponent(filter)}`, {
-        Authorization: `Bearer ${auth.token}`,
+  // Budget-vs-actual rows: budgeted (scaled to the range) vs spent, per category.
+  const budgetRows = useMemo(() => {
+    if (!isBudget) return []
+    const months = monthsInRange(range.start, range.endExclusive, transactions)
+    const spentByCat: Record<string, number> = {}
+    for (const t of transactions) {
+      if (t.type !== 'expense') continue
+      const c = t.category || 'Uncategorized'
+      spentByCat[c] = (spentByCat[c] || 0) + txAmount(t)
+    }
+    return budgets
+      .map((b) => {
+        const budget = b.budgetAmount * months
+        const spent = spentByCat[b.category] || 0
+        return { category: b.category, budget, spent, remaining: budget - spent }
       })
-      setTransactions(items)
+      .sort((a, b) => b.spent - a.spent)
+  }, [isBudget, budgets, transactions, range.start, range.endExclusive])
+
+  const rangeMonths = monthsInRange(range.start, range.endExclusive, transactions)
+  // Fractional years the range spans, used to annualize each row into an
+  // "average per year" figure. Only shown for category/vendor, where a
+  // per-bucket annual average is meaningful.
+  const years = useMemo(
+    () => yearsInRange(range.start, range.endExclusive, transactions.map((t) => t.date)),
+    [range.start, range.endExclusive, transactions]
+  )
+  const showAvgPerYear = groupBy === 'category' || groupBy === 'vendor'
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const valueLabel = VALUE_OPTIONS.find((v) => v.value === valueType)?.label || 'Spending'
+      const groupLabel = GROUP_OPTIONS.find((g) => g.value === groupBy)?.label || 'Category'
+      const sheets = isBudget
+        ? buildBudgetSheets(range.label, budgetRows, transactions)
+        : buildReportSheets({
+            groupLabel,
+            valueLabel,
+            rangeLabel: range.label,
+            rows: grouped.rows,
+            total: grouped.total,
+            years,
+            showAvgPerYear,
+            txns: transactions,
+            totals,
+          })
+      // Filename-safe (not sheet-name-safe — no 31-char cap): collapse the
+      // range label's spaces and en-dash into single hyphens.
+      const name = `report-${groupBy}-${range.label}`
+        .replace(/[–—]/g, '-')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+      await downloadXlsx(sheets, `${name}.xlsx`)
     } catch (err) {
-      console.error('Error loading transactions:', err)
+      console.error('Export failed:', err)
+      toast.error('Could not generate the Excel file')
     } finally {
-      setLoading(false)
+      setExporting(false)
     }
   }
 
-  const categoryStats = categoryBreakdown(transactions)
-  const trendData = monthlyTrend(transactions)
-  const totals = reportTotals(transactions)
+  // Bars are horizontal for category/vendor (long labels) and vertical for the
+  // month/year time series.
+  const horizontal = groupBy === 'category' || groupBy === 'vendor'
+  const chartRows = grouped.rows.slice(0, CHART_LIMIT).map((r) => ({ ...r, value: Math.abs(r.value) }))
 
-  const expenseChartData = categoryStats
-    .filter((c) => c.expense > 0)
-    .sort((a, b) => b.expense - a.expense)
-    .slice(0, 8)
-    .map((cat) => ({
-      name: cat.name,
-      value: cat.expense,
-    }))
+  // Filter the loaded rows down to one group for drill-down, respecting the
+  // active value-type so an "Income" report drills into income transactions.
+  const txnsForRow = (gb: GroupBy, key: string) => {
+    const match = rowMatcher(gb, key)
+    return transactions.filter((t) => {
+      if (!match(t)) return false
+      if (valueType === 'expense') return t.type === 'expense'
+      if (valueType === 'income') return t.type === 'income'
+      return true
+    })
+  }
 
-  const COLORS = ['#f97316', '#06b6d4', '#10b981', '#eab308', '#a855f7', '#ec4899', '#3b82f6', '#f59e0b']
+  const openRowDrill = (gb: GroupBy, key: string, label: string) => {
+    setDrill({ title: label, subtitle: `${range.label} · transactions`, txns: txnsForRow(gb, key) })
+  }
 
-  const handlePrevMonth = () => setCurrentMonth(shiftMonth(currentMonth, -1))
-  const handleNextMonth = () => setCurrentMonth(shiftMonth(currentMonth, 1))
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg text-ink-400">Loading reports...</div>
-      </div>
-    )
+  const openBudgetDrill = (category: string) => {
+    const txns = transactions.filter((t) => t.type === 'expense' && (t.category || 'Uncategorized') === category)
+    setDrill({ title: category, subtitle: `${range.label} · spending`, txns })
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
-      <div>
-        <h1 className="text-display-lg">Reports</h1>
-        <p className="mt-2 text-ink-400">Financial overview and insights</p>
-      </div>
-
-      {/* Filter Buttons */}
-      <div className="mt-6 flex items-center gap-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilterType('month')}
-            className={`px-4 py-2 rounded-sm text-body-sm font-normal transition-colors ${
-              filterType === 'month'
-                ? 'bg-accent-sunset text-canvas'
-                : 'bg-ink-700 text-ink-200 hover:bg-ink-600'
-            }`}
-          >
-            Month
-          </button>
-          <button
-            onClick={() => setFilterType('year')}
-            className={`px-4 py-2 rounded-sm text-body-sm font-normal transition-colors ${
-              filterType === 'year'
-                ? 'bg-accent-sunset text-canvas'
-                : 'bg-ink-700 text-ink-200 hover:bg-ink-600'
-            }`}
-          >
-            Year
-          </button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-display-lg">Reports</h1>
+          <p className="mt-2 text-ink-400">Break your money down any way you like</p>
         </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting || transactions.length === 0}
+          className="btn-secondary self-start px-4 sm:shrink-0"
+          title="Download this report as an Excel workbook"
+        >
+          <Download size={16} className="mr-2" />
+          {exporting ? 'Preparing…' : 'Export Excel'}
+        </button>
+      </div>
 
-        {filterType === 'month' && (
-          <div className="flex items-center gap-2">
-            <button onClick={handlePrevMonth} aria-label="Previous month" className="p-1 hover:bg-ink-700 rounded transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <span className="text-body-md min-w-[150px] text-center">
-              {monthLabel(currentMonth)}
-            </span>
-            <button onClick={handleNextMonth} aria-label="Next month" className="p-1 hover:bg-ink-700 rounded transition-colors">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        )}
+      {/* Controls */}
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="block">
+          <span className="mb-1 block text-body-sm text-ink-400">Group by</span>
+          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as Grouping)} className="input-base" aria-label="Group by">
+            {GROUP_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
 
-        {filterType === 'year' && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentYear(currentYear - 1)}
-              aria-label="Previous year"
-              className="p-1 hover:bg-ink-700 rounded transition-colors"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <span className="text-body-md min-w-[100px] text-center">{currentYear}</span>
-            <button
-              onClick={() => setCurrentYear(currentYear + 1)}
-              aria-label="Next year"
-              className="p-1 hover:bg-ink-700 rounded transition-colors"
-            >
-              <ChevronRight size={20} />
-            </button>
+        <label className="block">
+          <span className="mb-1 block text-body-sm text-ink-400">Show</span>
+          <select
+            value={valueType}
+            onChange={(e) => setValueType(e.target.value as ValueType)}
+            disabled={isBudget}
+            className="input-base disabled:opacity-50"
+            aria-label="Value type"
+          >
+            {VALUE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-body-sm text-ink-400">Date range</span>
+          <select value={preset} onChange={(e) => setPreset(e.target.value as RangePreset)} className="input-base" aria-label="Date range">
+            {RANGE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+
+        {preset === 'custom' && (
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="mb-1 block text-body-sm text-ink-400">From</span>
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="input-base" aria-label="Start date" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-body-sm text-ink-400">To</span>
+              <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="input-base" aria-label="End date" />
+            </label>
           </div>
         )}
       </div>
 
-      {/* Summary Stats */}
-      <div className="mt-8 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="card p-6">
+      <p className="mt-3 text-body-sm text-ink-500">
+        Showing <span className="text-ink-300">{range.label}</span>
+        {isBudget && rangeMonths > 1 && <> · budgets scaled ×{rangeMonths} months</>}
+      </p>
+
+      {/* Summary tiles */}
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <DollarSign size={20} className="text-accent-sunset" />
             <p className="text-body-sm text-ink-400">Income</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-sunset">${totals.income.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-sunset">{money(totals.income)}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <TrendingDown size={20} className="text-accent-dusk" />
             <p className="text-body-sm text-ink-400">Expenses</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-dusk">${totals.expense.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-dusk">{money(totals.expense)}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <TrendingUp size={20} className="text-accent-breeze" />
             <p className="text-body-sm text-ink-400">Net</p>
           </div>
-          <p className={`mt-2 text-3xl font-normal ${totals.net >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>
-            ${totals.net.toFixed(2)}
-          </p>
+          <p className={`mt-2 text-2xl sm:text-3xl font-normal ${totals.net >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>{money(totals.net)}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <Percent size={20} className="text-accent-twilight" />
-            <p className="text-body-sm text-ink-400">Savings Rate</p>
+            <p className="text-body-sm text-ink-400">Savings rate</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-twilight">{totals.savingsRate.toFixed(1)}%</p>
-        </div>
-        <div className="card p-6">
-          <div className="flex items-center gap-2">
-            <DollarSign size={20} className="text-ink-400" />
-            <p className="text-body-sm text-ink-400">Transactions</p>
-          </div>
-          <p className="mt-2 text-3xl font-normal text-ink-200">{totals.count}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-twilight">{totals.savingsRate.toFixed(1)}%</p>
         </div>
       </div>
 
-      {/* Charts */}
-      {trendData.length > 0 && (
-        <div className="mt-12 grid gap-8 grid-cols-1 lg:grid-cols-2">
-          {/* Monthly Trend Chart */}
-          <div className="card p-6">
-            <h3 className="text-lg font-normal text-ink-50 mb-4">Monthly Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f3f" />
-                <XAxis dataKey="month" stroke="#888" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#888" style={{ fontSize: '12px' }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }}
-                  labelStyle={{ color: '#d4d4d4' }}
-                />
-                <Legend />
-                <Bar dataKey="income" fill="#f97316" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" fill="#a855f7" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Category Breakdown Chart */}
-          {expenseChartData.length > 0 && (
-            <div className="card p-6">
-              <h3 className="text-lg font-normal text-ink-50 mb-4">Expense by Category</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={expenseChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {expenseChartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }}
-                    labelStyle={{ color: '#d4d4d4' }}
-                  />
-                </PieChart>
+      {loading ? (
+        <div className="mt-12 card p-12 text-center text-ink-400">Loading…</div>
+      ) : transactions.length === 0 ? (
+        <div className="mt-12 card p-12 text-center text-ink-400">No transactions in this range.</div>
+      ) : isBudget ? (
+        <BudgetView rows={budgetRows} onDrill={openBudgetDrill} />
+      ) : (
+        <>
+          {/* Chart */}
+          <div className="mt-10 card p-4 sm:p-6">
+            <h2 className="mb-4 text-lg font-normal text-ink-50">
+              {VALUE_OPTIONS.find((v) => v.value === valueType)?.label} by {GROUP_OPTIONS.find((g) => g.value === groupBy)?.label.toLowerCase()}
+            </h2>
+            {chartRows.length === 0 ? (
+              <p className="py-12 text-center text-ink-400">Nothing to show for this selection.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(280, horizontal ? chartRows.length * 34 + 40 : 320)}>
+                {horizontal ? (
+                  <BarChart data={chartRows} layout="vertical" margin={{ left: 8, right: 16 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f3f" horizontal={false} />
+                    <XAxis type="number" stroke="#888" style={{ fontSize: '12px' }} tickFormatter={(v) => `$${v}`} />
+                    <YAxis type="category" dataKey="label" stroke="#888" style={{ fontSize: '12px' }} width={100} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }} labelStyle={{ color: '#d4d4d4' }} formatter={(v: number) => money(v)} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(d: any) => openRowDrill(groupBy as GroupBy, d.key, d.label)}>
+                      {chartRows.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
+                  <BarChart data={chartRows} margin={{ left: 8, right: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f3f" />
+                    <XAxis dataKey="label" stroke="#888" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="#888" style={{ fontSize: '12px' }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }} labelStyle={{ color: '#d4d4d4' }} formatter={(v: number) => money(v)} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => openRowDrill(groupBy as GroupBy, d.key, d.label)}>
+                      {chartRows.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                )}
               </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {grouped.rows.length > CHART_LIMIT && (
+              <p className="mt-3 text-body-sm text-ink-500">Chart shows the top {CHART_LIMIT} of {grouped.rows.length} — the full list is in the table below.</p>
+            )}
+          </div>
 
-      {/* Category spending trend (last 6 months, independent of the filter) */}
-      {catTrend.data.length > 1 && catTrend.categories.length > 0 && (
-        <div className="mt-12 card p-6">
-          <h3 className="text-lg font-normal text-ink-50 mb-4">Spending by category · last 6 months</h3>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={catTrend.data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f3f" />
-              <XAxis dataKey="month" stroke="#888" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#888" style={{ fontSize: '12px' }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }}
-                labelStyle={{ color: '#d4d4d4' }}
-              />
-              <Legend />
-              {catTrend.categories.map((cat, i) => (
-                <Bar key={cat} dataKey={cat} stackId="spend" fill={COLORS[i % COLORS.length]} radius={i === catTrend.categories.length - 1 ? [4, 4, 0, 0] : undefined} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Category Breakdown Table */}
-      <div className="mt-12">
-        <h2 className="text-display-sm mb-6">Category Details</h2>
-        {categoryStats.length > 0 ? (
-          <div className="overflow-x-auto rounded-sm border border-ink-700">
-            <table className="table-minimal">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th className="text-right">Transactions</th>
-                  <th className="text-right">Income</th>
-                  <th className="text-right">Expenses</th>
-                  <th className="text-right">Net</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categoryStats.map((cat) => (
-                  <tr key={cat.name}>
-                    <td className="text-ink-300 font-medium">
-                      <button
-                        type="button"
-                        onClick={() => setDrill(cat.name)}
-                        className="text-left hover:text-ink-100 underline decoration-dotted decoration-ink-600 underline-offset-4"
-                        title="See transactions"
-                      >
-                        {cat.name}
-                      </button>
-                    </td>
-                    <td className="text-right">
-                      <span className="inline-block px-2 py-1 bg-accent-breeze text-canvas text-body-sm rounded-full font-medium">
-                        {cat.count}
-                      </span>
-                    </td>
-                    <td className="text-right text-accent-sunset font-medium">${cat.income.toFixed(2)}</td>
-                    <td className="text-right text-accent-dusk font-medium">${cat.expense.toFixed(2)}</td>
-                    <td className={`text-right font-bold ${cat.net >= 0 ? 'text-accent-breeze' : 'text-accent-dusk'}`}>
-                      ${cat.net.toFixed(2)}
-                    </td>
+          {/* Table */}
+          <div className="mt-8">
+            <div className="table-scroll">
+              <table className="table-minimal">
+                <thead>
+                  <tr>
+                    <th>{GROUP_OPTIONS.find((g) => g.value === groupBy)?.label}</th>
+                    <th className="text-right">Transactions</th>
+                    <th className="text-right">{VALUE_OPTIONS.find((v) => v.value === valueType)?.label}</th>
+                    {showAvgPerYear && <th className="text-right">Avg / year</th>}
+                    <th className="text-right">% of total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {grouped.rows.map((r) => (
+                    <tr key={r.key}>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => openRowDrill(groupBy as GroupBy, r.key, r.label)}
+                          className="text-left text-ink-200 underline decoration-dotted decoration-ink-600 underline-offset-4 hover:text-ink-50"
+                          title="See transactions"
+                        >
+                          {r.label}
+                        </button>
+                      </td>
+                      <td className="text-right text-ink-400">{r.count}</td>
+                      <td className={`text-right font-medium ${r.value >= 0 ? 'text-ink-100' : 'text-accent-dusk'}`}>{money(r.value)}</td>
+                      {showAvgPerYear && <td className="text-right text-ink-300">{money(r.value / years)}</td>}
+                      <td className="text-right text-ink-500">
+                        {grouped.total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(grouped.total)) * 100)}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ) : (
-          <div className="card p-12 text-center">
-            <p className="text-ink-400">No transactions in the selected period</p>
-          </div>
-        )}
+        </>
+      )}
+
+      {drill && (
+        <TxnListModal title={drill.title} subtitle={drill.subtitle} txns={drill.txns} onClose={() => setDrill(null)} />
+      )}
+    </div>
+  )
+}
+
+// Budget-vs-actual: paired budgeted/spent bars plus a variance table.
+function BudgetView({
+  rows,
+  onDrill,
+}: {
+  rows: { category: string; budget: number; spent: number; remaining: number }[]
+  onDrill: (category: string) => void
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="mt-12 card p-12 text-center text-ink-400">
+        No budgets set yet. Add budgets on the Budget page to compare them against actual spending here.
+      </div>
+    )
+  }
+  const chart = rows.slice(0, CHART_LIMIT)
+  return (
+    <>
+      <div className="mt-10 card p-4 sm:p-6">
+        <h2 className="mb-4 text-lg font-normal text-ink-50">Budget vs actual</h2>
+        <ResponsiveContainer width="100%" height={Math.max(280, chart.length * 40 + 40)}>
+          <BarChart data={chart} layout="vertical" margin={{ left: 8, right: 16 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3f3f3f" horizontal={false} />
+            <XAxis type="number" stroke="#888" style={{ fontSize: '12px' }} tickFormatter={(v) => `$${v}`} />
+            <YAxis type="category" dataKey="category" stroke="#888" style={{ fontSize: '12px' }} width={100} />
+            <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3f3f3f', borderRadius: '4px' }} labelStyle={{ color: '#d4d4d4' }} formatter={(v: number) => money(v)} />
+            <Legend />
+            <Bar dataKey="budget" name="Budgeted" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="spent" name="Spent" fill="#f97316" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
-      {drill && (() => {
-        const since = filterType === 'month' ? monthRange(currentMonth).start : `${currentYear}-01-01`
-        const until = filterType === 'month' ? monthRange(currentMonth).endExclusive : `${currentYear + 1}-01-01`
-        const label = filterType === 'month' ? monthLabel(currentMonth) : String(currentYear)
-        return (
-          <TransactionsModal
-            title={drill}
-            subtitle={`${label} · all transactions in this category`}
-            category={drill}
-            since={since}
-            until={until}
-            onClose={() => setDrill(null)}
-          />
-        )
-      })()}
-    </div>
+      <div className="mt-8 table-scroll">
+        <table className="table-minimal">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th className="text-right">Budgeted</th>
+              <th className="text-right">Spent</th>
+              <th className="text-right">Remaining</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.category}>
+                <td>
+                  <button
+                    type="button"
+                    onClick={() => onDrill(r.category)}
+                    className="text-left text-ink-200 underline decoration-dotted decoration-ink-600 underline-offset-4 hover:text-ink-50"
+                    title="See transactions"
+                  >
+                    {r.category}
+                  </button>
+                </td>
+                <td className="text-right text-ink-400">{money(r.budget)}</td>
+                <td className="text-right text-accent-sunset font-medium">{money(r.spent)}</td>
+                <td className={`text-right font-medium ${r.remaining >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>{money(r.remaining)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }

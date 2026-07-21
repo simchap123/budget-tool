@@ -41,10 +41,14 @@ export default {
         mono: ['GeistMono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
-        'display-xl': ['96px', { lineHeight: '96px', letterSpacing: '-2.4px', fontWeight: '400' }],
-        'display-lg': ['72px', { lineHeight: '72px', letterSpacing: '-1.8px', fontWeight: '400' }],
-        'display-md': ['48px', { lineHeight: '48px', letterSpacing: '-1.2px', fontWeight: '400' }],
-        'display-sm': ['32px', { lineHeight: '36px', letterSpacing: '-0.6px', fontWeight: '400' }],
+        // Display sizes are fluid: they hit the original desktop size at ~1280px
+        // and shrink on small screens. Previously these were fixed px, so a
+        // 72px <h1> overflowed a 375px viewport and forced the page to scroll
+        // sideways. Line-height/tracking are unitless/em so they track the size.
+        'display-xl': ['clamp(2.75rem, 8.5vw + 0.5rem, 6rem)', { lineHeight: '1', letterSpacing: '-0.025em', fontWeight: '400' }],
+        'display-lg': ['clamp(2.25rem, 6.5vw + 0.5rem, 4.5rem)', { lineHeight: '1.05', letterSpacing: '-0.025em', fontWeight: '400' }],
+        'display-md': ['clamp(1.75rem, 4.5vw + 0.5rem, 3rem)', { lineHeight: '1.1', letterSpacing: '-0.025em', fontWeight: '400' }],
+        'display-sm': ['clamp(1.375rem, 2.5vw + 0.5rem, 2rem)', { lineHeight: '1.15', letterSpacing: '-0.02em', fontWeight: '400' }],
         'body-lg': ['18px', { lineHeight: '28px', fontWeight: '400' }],
         'body-md': ['16px', { lineHeight: '24px', fontWeight: '400' }],
         'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
@@ -58,6 +62,8 @@ export default {
       spacing: {
         xxs: '2px',
         xs: '4px',
+        /* Minimum comfortable touch target (iOS HIG 44pt / Material 48dp). */
+        touch: '44px',
       },
       keyframes: {
         fadeIn: {
@@ -76,11 +82,30 @@ export default {
           from: { backgroundPosition: '-200% 0' },
           to: { backgroundPosition: '200% 0' },
         },
+        /* Phone-native motion: dialogs rise from the bottom edge rather than
+           scaling from the middle, which reads as a sheet on a small screen. */
+        sheetUp: {
+          from: { opacity: '0', transform: 'translateY(12%)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        overlayIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        toastIn: {
+          from: { opacity: '0', transform: 'translateY(120%) scale(0.96)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
       },
       animation: {
-        'fade-in': 'fadeIn 200ms ease-out both',
-        'slide-down': 'slideDown 200ms ease-out both',
-        'scale-in': 'scaleIn 150ms ease-out both',
+        /* Springy easing — decelerates like a physical object instead of
+           the linear-ish feel of plain ease-out. */
+        'fade-in': 'fadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'slide-down': 'slideDown 220ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'scale-in': 'scaleIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'sheet-up': 'sheetUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'overlay-in': 'overlayIn 200ms ease-out both',
+        'toast-in': 'toastIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both',
         shimmer: 'shimmer 1.5s ease-in-out infinite',
       },
     },

@@ -49,7 +49,7 @@ export function Analytics() {
           <button
             key={d}
             onClick={() => setDays(d)}
-            className={`px-4 py-2 rounded-sm text-body-sm font-normal transition-colors ${
+            className={`inline-flex items-center justify-center min-h-touch px-4 rounded-sm text-body-sm font-normal transition-colors ${
               days === d
                 ? 'bg-accent-sunset text-canvas'
                 : 'bg-ink-700 text-ink-200 hover:bg-ink-600'
@@ -61,45 +61,45 @@ export function Analytics() {
       </div>
 
       {/* Summary Stats */}
-      <div className="mt-8 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-4">
-        <div className="card p-6">
+      <div className="mt-8 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <Activity size={20} className="text-accent-sunset" />
             <p className="text-body-sm text-ink-400">Transactions</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-sunset">{data.totalTransactions}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-sunset">{data.totalTransactions}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <TrendingUp size={20} className="text-accent-breeze" />
             <p className="text-body-sm text-ink-400">Imported</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-breeze">{data.totalImported}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-breeze">{data.totalImported}</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <BarChart3 size={20} className="text-accent-dusk" />
             <p className="text-body-sm text-ink-400">Avg Daily</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-dusk">
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-dusk">
             {data.dailyActivity.length > 0
               ? (data.totalTransactions / Math.max(data.dailyActivity.length, 1)).toFixed(1)
               : '0'}
           </p>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <div className="flex items-center gap-2">
             <TrendingDown size={20} className="text-accent-twilight" />
             <p className="text-body-sm text-ink-400">Pages Visited</p>
           </div>
-          <p className="mt-2 text-3xl font-normal text-accent-twilight">{data.pageViews.length}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-twilight">{data.pageViews.length}</p>
         </div>
       </div>
 
       {/* Charts */}
       <div className="mt-12 grid gap-8 grid-cols-1 lg:grid-cols-2">
         {/* Daily Activity Chart */}
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <h3 className="text-lg font-normal text-ink-50 mb-4">Daily Activity</h3>
           {data.dailyActivity.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -120,7 +120,7 @@ export function Analytics() {
         </div>
 
         {/* Page Views Chart */}
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <h3 className="text-lg font-normal text-ink-50 mb-4">Top Pages</h3>
           {data.pageViews.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -145,8 +145,8 @@ export function Analytics() {
       {data.topTransactionTypes.length > 0 && (
         <div className="mt-8 card p-6">
           <h3 className="text-lg font-normal text-ink-50 mb-4">Top Actions</h3>
-          <div className="overflow-x-auto rounded-sm border border-ink-700">
-            <table className="w-full text-body-sm">
+          <div className="table-scroll">
+            <table className="w-full min-w-[34rem] text-body-sm">
               <thead>
                 <tr className="border-b border-ink-700">
                   <th className="px-4 py-2 text-left text-ink-300">Action</th>

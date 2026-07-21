@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Menu, X, Settings } from 'lucide-react'
+import { Menu, X, Settings, LayoutDashboard, Wallet, BarChart3, HandHeart } from 'lucide-react'
 
 export function Header({
   user,
@@ -20,6 +20,7 @@ export function Header({
   }
 
   return (
+    <>
     <header className="border-b border-ink-700 bg-canvas">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
@@ -32,7 +33,7 @@ export function Header({
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6">
             {user ? (
               <>
                 <button
@@ -96,19 +97,20 @@ export function Header({
                   Giving
                 </button>
                 <button
-                  onClick={() => handleNavClick('vendors')}
+                  onClick={() => handleNavClick('categories')}
                   className={`text-body-md font-normal transition-colors ${
-                    currentPage === 'vendors'
+                    currentPage === 'categories' || currentPage === 'vendors'
                       ? 'text-accent-sunset'
                       : 'text-ink-400 hover:text-ink-200'
                   }`}
                 >
-                  Vendors
+                  Categories
                 </button>
                 <button
-                  onClick={() => handleNavClick('categories')}
-                  className="p-1 text-ink-400 hover:text-ink-200 transition-colors"
-                  title="Categories"
+                  onClick={() => handleNavClick('settings')}
+                  className={`btn-icon ${currentPage === 'settings' ? 'text-accent-sunset' : ''}`}
+                  title="Settings"
+                  aria-label="Settings"
                 >
                   <Settings size={20} />
                 </button>
@@ -144,7 +146,7 @@ export function Header({
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
-            className="md:hidden text-ink-400 hover:text-ink-200 transition-colors"
+            className="btn-icon lg:hidden -mr-2"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -152,13 +154,15 @@ export function Header({
 
         {/* Mobile Navigation */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-ink-700 bg-canvas-card py-4 animate-slide-down">
-            <div className="space-y-3">
+          /* Nine items plus the email row can exceed a short phone screen in
+             landscape, so the menu scrolls within the remaining viewport. */
+          <div className="lg:hidden border-t border-ink-700 bg-canvas-card py-4 animate-slide-down max-h-[calc(100dvh-4rem)] overflow-y-auto pad-safe-b">
+            <div className="space-y-1">
               {user ? (
                 <>
                   <button
                     onClick={() => handleNavClick('dashboard')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'dashboard'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
@@ -168,7 +172,7 @@ export function Header({
                   </button>
                   <button
                     onClick={() => handleNavClick('budget')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'budget'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
@@ -178,7 +182,7 @@ export function Header({
                   </button>
                   <button
                     onClick={() => handleNavClick('reports')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'reports'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
@@ -188,7 +192,7 @@ export function Header({
                   </button>
                   <button
                     onClick={() => handleNavClick('analytics')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'analytics'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
@@ -198,7 +202,7 @@ export function Header({
                   </button>
                   <button
                     onClick={() => handleNavClick('recurring')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'recurring'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
@@ -208,7 +212,7 @@ export function Header({
                   </button>
                   <button
                     onClick={() => handleNavClick('giving')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
                       currentPage === 'giving'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
@@ -217,30 +221,30 @@ export function Header({
                     Giving
                   </button>
                   <button
-                    onClick={() => handleNavClick('vendors')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
-                      currentPage === 'vendors'
-                        ? 'text-accent-sunset'
-                        : 'text-ink-400 hover:text-ink-200'
-                    }`}
-                  >
-                    Vendors
-                  </button>
-                  <button
                     onClick={() => handleNavClick('categories')}
-                    className={`block w-full text-left px-4 py-2 text-body-md font-normal transition-colors ${
-                      currentPage === 'categories'
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'categories' || currentPage === 'vendors'
                         ? 'text-accent-sunset'
                         : 'text-ink-400 hover:text-ink-200'
                     }`}
                   >
                     Categories
                   </button>
+                  <button
+                    onClick={() => handleNavClick('settings')}
+                    className={`flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal transition-colors ${
+                      currentPage === 'settings'
+                        ? 'text-accent-sunset'
+                        : 'text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Settings
+                  </button>
                   <div className="h-px w-full bg-ink-700" />
                   <span className="block px-4 py-2 text-body-sm text-ink-500">{user.email}</span>
                   <button
                     onClick={onLogout}
-                    className="block w-full text-left px-4 py-2 text-body-sm font-normal text-accent-dusk hover:text-red-400 transition-colors"
+                    className="flex w-full items-center min-h-touch text-left px-4 py-2 text-body-sm font-normal text-accent-dusk hover:text-red-400 transition-colors"
                   >
                     Logout
                   </button>
@@ -249,7 +253,7 @@ export function Header({
                 <>
                   <button
                     onClick={() => handleNavClick('login')}
-                    className="block w-full text-left px-4 py-2 text-body-md font-normal text-ink-400 hover:text-ink-200 transition-colors"
+                    className="flex w-full items-center min-h-touch text-left px-4 py-2 text-body-md font-normal text-ink-400 hover:text-ink-200 transition-colors"
                   >
                     Sign In
                   </button>
@@ -266,5 +270,46 @@ export function Header({
         )}
       </nav>
     </header>
+
+    {/* Mobile bottom tab bar: primary destinations always one thumb-tap away
+        (Giving included, so charity tracking is never buried in a menu). */}
+    {user && <BottomNav currentPage={currentPage} onNavigate={onNavigate} />}
+    </>
+  )
+}
+
+const BOTTOM_ITEMS = [
+  { page: 'dashboard', label: 'Home', Icon: LayoutDashboard },
+  { page: 'budget', label: 'Budget', Icon: Wallet },
+  { page: 'reports', label: 'Reports', Icon: BarChart3 },
+  { page: 'giving', label: 'Giving', Icon: HandHeart },
+  { page: 'settings', label: 'Settings', Icon: Settings },
+] as const
+
+function BottomNav({ currentPage, onNavigate }: { currentPage: string; onNavigate: (p: string) => void }) {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-700 bg-canvas/95 backdrop-blur lg:hidden pad-safe-b"
+      aria-label="Primary"
+    >
+      <div className="grid grid-cols-5">
+        {BOTTOM_ITEMS.map(({ page, label, Icon }) => {
+          const active = currentPage === page
+          return (
+            <button
+              key={page}
+              onClick={() => onNavigate(page)}
+              aria-current={active ? 'page' : undefined}
+              className={`flex min-h-touch flex-col items-center justify-center gap-0.5 py-2 text-[11px] transition-colors ${
+                active ? 'text-accent-sunset' : 'text-ink-400 hover:text-ink-200'
+              }`}
+            >
+              <Icon size={20} />
+              {label}
+            </button>
+          )
+        })}
+      </div>
+    </nav>
   )
 }

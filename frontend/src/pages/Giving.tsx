@@ -98,11 +98,11 @@ export function Giving() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-full bg-accent-twilight/15 text-accent-twilight">
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 p-2 rounded-full bg-accent-twilight/15 text-accent-twilight">
           <HandHeart size={22} />
         </div>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-display-lg">Giving</h1>
           <p className="mt-1 text-ink-400">Track a percentage of your income toward giving (tithe, charity, etc.)</p>
         </div>
@@ -176,7 +176,7 @@ export function Giving() {
           </div>
           <div>
             <p className="text-body-sm text-ink-500">Given</p>
-            <button type="button" onClick={() => category && setDrill('month')} className="text-lg text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See this month's giving">
+            <button type="button" onClick={() => category && setDrill('month')} className="inline-flex min-h-touch items-center text-lg text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See this month's giving">
               ${current.given.toFixed(2)}
             </button>
           </div>
@@ -194,7 +194,7 @@ export function Giving() {
         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <p className="text-body-sm text-ink-500">Total given</p>
-            <button type="button" onClick={() => category && setDrill('all')} className="text-2xl text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See all giving transactions">
+            <button type="button" onClick={() => category && setDrill('all')} className="inline-flex min-h-touch items-center text-xl sm:text-2xl text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See all giving transactions">
               ${summary.totalGiven.toFixed(2)}
             </button>
           </div>
@@ -208,8 +208,8 @@ export function Giving() {
 
       {/* Monthly breakdown */}
       {summary.months.length > 0 && (
-        <div className="mt-6 card p-4 overflow-x-auto">
-          <table className="w-full text-body-sm">
+        <div className="mt-6 card p-4 table-scroll">
+          <table className="w-full min-w-[34rem] text-body-sm">
             <thead><tr className="text-ink-500 text-left">
               <th className="py-2">Month</th><th className="text-right">Income</th><th className="text-right">Target</th><th className="text-right">Given</th><th className="text-right">+/-</th>
             </tr></thead>

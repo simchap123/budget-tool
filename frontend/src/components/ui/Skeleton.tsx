@@ -23,8 +23,8 @@ export function SkeletonCard() {
 
 export function SkeletonTable({ rows = 8, cols = 5 }: { rows?: number; cols?: number }) {
   return (
-    <div className="overflow-x-auto rounded-sm border border-ink-700 bg-canvas-card">
-      <table className="w-full">
+    <div className="table-scroll bg-canvas-card">
+      <table className="w-full min-w-[34rem]">
         <thead>
           <tr>
             {Array.from({ length: cols }).map((_, i) => (
