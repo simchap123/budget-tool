@@ -6,7 +6,6 @@ import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Budget } from './pages/Budget'
 import { Categories } from './pages/Categories'
-import { Recurring } from './pages/Recurring'
 import { Giving } from './pages/Giving'
 import { Settings } from './pages/Settings'
 import { Header } from './components/Header'
@@ -116,9 +115,6 @@ export default function App() {
         )}
         {currentPage === 'categories' && user && (
           <Categories />
-        )}
-        {currentPage === 'recurring' && user && (
-          <Recurring />
         )}
         {currentPage === 'giving' && user && (
           <Giving />

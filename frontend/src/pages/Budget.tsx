@@ -15,6 +15,7 @@ import {
   recurringByCategory,
   recurringKeySet,
   totalMonthlyRecurring,
+  fixedFlexible,
   CategoryRecurring,
 } from '../utils/budgetInsights'
 
@@ -51,6 +52,7 @@ export function Budget() {
   const [recurKeys, setRecurKeys] = useState<Set<string>>(new Set())
   const [totalRecurring, setTotalRecurring] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [showRecurringList, setShowRecurringList] = useState(false)
 
   useEffect(() => {
     fetchBudgetData()
@@ -282,6 +284,12 @@ export function Budget() {
   const totalSpent = transactions.reduce((sum, t) => sum + (t.spent || 0), 0)
   const remaining = totalBudgeted - totalSpent
 
+  // Every recurring charge, flattened across categories, biggest first — the
+  // list the retired Recurring page used to show.
+  const allRecurring = Object.entries(recurByCat)
+    .flatMap(([category, r]) => r.vendors.map((v) => ({ ...v, category })))
+    .sort((a, b) => b.monthly - a.monthly)
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -398,19 +406,41 @@ export function Budget() {
         </div>
       </div>
 
-      {/* Recurring / fixed — the committed part of the plan */}
+      {/* Recurring / fixed — the committed part of the plan. Expands to the full
+          subscription list, which is why the standalone Recurring page retired. */}
       {totalRecurring > 0 && (
         <div className="mt-4 card p-4 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => setShowRecurringList((v) => !v)}
+            aria-expanded={showRecurringList}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
             <div className="flex items-center gap-2">
               <Repeat size={18} className="text-accent-twilight" />
               <p className="text-body-sm text-ink-400">Recurring &amp; bills each month</p>
             </div>
-            <p className="text-xl font-normal text-accent-twilight">${totalRecurring.toFixed(0)}<span className="text-body-sm text-ink-500">/mo</span></p>
-          </div>
+            <div className="flex items-center gap-2">
+              <p className="text-xl font-normal text-accent-twilight">${totalRecurring.toFixed(0)}<span className="text-body-sm text-ink-500">/mo</span></p>
+              <ChevronDown size={16} className={`text-ink-500 transition-transform ${showRecurringList ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
           <p className="mt-1 text-body-sm text-ink-500">
             Detected subscriptions &amp; bills — the fixed part of your budget that repeats every month.
           </p>
+          {showRecurringList && (
+            <div className="mt-3 space-y-1.5 border-t border-ink-700 pt-3">
+              {allRecurring.map((r) => (
+                <div key={r.key} className="flex items-center justify-between gap-3 text-body-sm">
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Repeat size={11} className="shrink-0 text-accent-twilight" />
+                    <span className="truncate text-ink-200">{r.label}</span>
+                    <span className="shrink-0 text-ink-500">· {r.category}</span>
+                  </span>
+                  <span className="shrink-0 text-ink-100">${r.monthly.toFixed(0)}/mo</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -447,11 +477,6 @@ export function Budget() {
                       <p className="mt-1 text-body-sm text-ink-400">
                         ${spent.toFixed(2)} of ${budget.budgetAmount.toFixed(2)}
                       </p>
-                      {rec && (
-                        <span className="mt-1 inline-flex items-center gap-1 text-body-sm text-accent-twilight">
-                          <Repeat size={12} /> ${rec.monthly.toFixed(0)}/mo recurring
-                        </span>
-                      )}
                     </button>
                     <div className="flex items-center gap-2 sm:gap-3">
                       <p className={`text-body-sm font-normal ${
@@ -484,6 +509,31 @@ export function Budget() {
                       'green'
                     } />
                   </div>
+
+                  {/* Fixed vs flexible: how much of this budget is committed to
+                      recurring charges vs free to steer. */}
+                  {rec && budget.budgetAmount > 0 && (() => {
+                    const { fixed, flexible, over } = fixedFlexible(budget.budgetAmount, rec.monthly)
+                    const fixedPct = (fixed / budget.budgetAmount) * 100
+                    return (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-body-sm">
+                          <span className="inline-flex items-center gap-1 text-accent-twilight">
+                            <Repeat size={11} /> Fixed ${fixed.toFixed(0)}
+                          </span>
+                          <span className="text-ink-400">Flexible ${flexible.toFixed(0)}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft" title={`Fixed $${fixed.toFixed(0)} of $${budget.budgetAmount.toFixed(0)}`}>
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${fixedPct}%`, backgroundColor: '#c4b5fd' }} />
+                        </div>
+                        {over > 0 && (
+                          <p className="mt-1 text-body-sm text-yellow-400">
+                            Recurring is ${over.toFixed(0)} over this budget — consider raising it.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {/* Thermometer by vendor: which merchants make up this category */}
                   {spent > 0 && (

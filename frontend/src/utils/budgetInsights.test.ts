@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { vendorSpendInCategory, recurringByCategory, recurringKeySet } from './budgetInsights'
+import { vendorSpendInCategory, recurringByCategory, recurringKeySet, fixedFlexible } from './budgetInsights'
+
+describe('fixedFlexible', () => {
+  it('splits a budget into committed recurring and flexible remainder', () => {
+    expect(fixedFlexible(400, 150)).toEqual({ fixed: 150, flexible: 250, over: 0 })
+  })
+  it('caps fixed at the budget and reports the overflow when recurring exceeds it', () => {
+    expect(fixedFlexible(100, 160)).toEqual({ fixed: 100, flexible: 0, over: 60 })
+  })
+  it('handles a zero budget', () => {
+    expect(fixedFlexible(0, 50)).toEqual({ fixed: 0, flexible: 0, over: 50 })
+  })
+})
 
 describe('vendorSpendInCategory', () => {
   const txns = [

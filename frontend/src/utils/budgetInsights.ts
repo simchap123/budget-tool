@@ -84,3 +84,13 @@ export function recurringKeySet(txns: RawTxn[]): Set<string> {
 export function totalMonthlyRecurring(txns: RawTxn[]): number {
   return detectRecurring(txns).reduce((s, i) => s + i.monthlyEstimate, 0)
 }
+
+// Split a category budget into its committed (recurring/fixed) part and the
+// flexible remainder you actually steer. `over` is how much recurring exceeds
+// the budget (i.e. the budget doesn't even cover the fixed charges).
+export function fixedFlexible(budget: number, recurring: number): { fixed: number; flexible: number; over: number } {
+  const fixed = Math.max(0, Math.min(recurring, budget))
+  const flexible = Math.max(0, budget - recurring)
+  const over = Math.max(0, recurring - budget)
+  return { fixed, flexible, over }
+}
