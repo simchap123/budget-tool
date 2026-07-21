@@ -29,6 +29,9 @@ export function VendorsPanel() {
   const [shown, setShown] = useState(PAGE)
   const [rebuilding, setRebuilding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [mergeTarget, setMergeTarget] = useState('')
+  const [merging, setMerging] = useState(false)
   // Escape cancels the inline rename without the blur handler also saving it.
   const escaped = useRef(false)
 
@@ -84,6 +87,29 @@ export function VendorsPanel() {
     }
   }
 
+  const selectedVendors = vendors.filter((v) => selected[v.matchKey])
+
+  // Merge every selected vendor into the target (their transactions take the
+  // target's category; the source vendor records are removed).
+  const runMerge = async (toKey: string) => {
+    const froms = selectedVendors.filter((v) => v.matchKey !== toKey)
+    if (!toKey || froms.length === 0) return
+    setMerging(true)
+    try {
+      for (const v of froms) {
+        await axios.post(`${apiUrl}/rpc/merge-vendor`, { fromKey: v.matchKey, toKey }, { headers: headers() })
+      }
+      toast.success(`Merged ${froms.length} vendor${froms.length === 1 ? '' : 's'}`)
+      setSelected({})
+      setMergeTarget('')
+      await load()
+    } catch (e: any) {
+      toast.error('Merge failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setMerging(false)
+    }
+  }
+
   const rebuild = async () => {
     setRebuilding(true)
     try {
@@ -119,9 +145,33 @@ export function VendorsPanel() {
         aria-label="Search vendors"
       />
 
+      {/* Bulk-merge bar — combine duplicate vendors (e.g. "Newday" + "Newday Airmont") */}
+      {selectedVendors.length > 1 && (
+        <div className="mt-4 card p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-body-sm text-ink-100">{selectedVendors.length} selected</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={mergeTarget} onChange={(e) => setMergeTarget(e.target.value)} className="input-base" aria-label="Merge into">
+              <option value="">Merge into…</option>
+              {selectedVendors.map((v) => <option key={v.matchKey} value={v.matchKey}>{v.name}</option>)}
+            </select>
+            <button disabled={merging || !mergeTarget} onClick={() => runMerge(mergeTarget)} className="btn-primary px-4 disabled:opacity-50">
+              {merging ? 'Merging…' : 'Merge'}
+            </button>
+            <button onClick={() => setSelected({})} className="px-2 text-body-sm text-ink-500 hover:text-ink-300">Clear</button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 card divide-y divide-canvas-soft">
         {filtered.slice(0, shown).map((v) => (
           <div key={v.id} className="flex items-center gap-3 p-3">
+            <input
+              type="checkbox"
+              checked={!!selected[v.matchKey]}
+              onChange={() => setSelected((s) => ({ ...s, [v.matchKey]: !s[v.matchKey] }))}
+              className="h-4 w-4 shrink-0 accent-[#ff7a17]"
+              aria-label={`Select ${v.name}`}
+            />
             <div className="min-w-0 flex-1">
               {editingId === v.id ? (
                 <input

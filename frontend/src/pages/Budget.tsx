@@ -54,6 +54,11 @@ export function Budget() {
   const [totalRecurring, setTotalRecurring] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showRecurringList, setShowRecurringList] = useState(false)
+  const [carrying, setCarrying] = useState(false)
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const [mergeFrom, setMergeFrom] = useState('')
+  const [mergeTo, setMergeTo] = useState('')
+  const [merging, setMerging] = useState(false)
   // Drill into a single vendor's transactions within a category, filtered
   // client-side from the already-loaded month expenses (no extra fetch).
   const [vendorDrill, setVendorDrill] = useState<{ key: string; label: string; category: string } | null>(null)
@@ -96,9 +101,9 @@ export function Budget() {
       const ym = `${year}-${String(month).padStart(2, '0')}`
       const { start: monthStart, endExclusive } = monthRange(ym)
 
-      // Budgets carry forward: one per category, applied to EVERY month (not
-      // tied to the month they were created in). Only "spent" is month-specific.
-      const budgetFilter = encodeURIComponent(`(userId='${auth.record.id}')`)
+      // Budgets are now locked to a specific month (year+month). Each month has
+      // its own set; a new month starts empty until you carry over or set them.
+      const budgetFilter = encodeURIComponent(`(userId='${auth.record.id}' && year=${year} && month=${month})`)
       const txnFilter = encodeURIComponent(`(date>='${monthStart}'&&date<'${endExclusive}'&&type='expense')`)
 
       const [budgetResponse, transactionResponse] = await Promise.all([
@@ -294,6 +299,64 @@ export function Budget() {
     .flatMap(([category, r]) => r.vendors.map((v) => ({ ...v, category })))
     .sort((a, b) => b.monthly - a.monthly)
 
+  // Start this month by copying forward the most recent budget for each category.
+  const carryOver = async () => {
+    setCarrying(true)
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth() + 1
+      const all = await fetchAllRecords(apiUrl, 'budgets', `filter=${encodeURIComponent(`(userId='${auth.record.id}')`)}&sort=-created`, {
+        Authorization: `Bearer ${auth.token}`,
+      })
+      const latest: Record<string, any> = {}
+      all.forEach((b: any) => {
+        if (Number(b.year) === year && Number(b.month) === month) return // ignore this month
+        const k = (b.category || '').toLowerCase()
+        if (!latest[k]) latest[k] = b // -created sort => first seen is newest
+      })
+      const here = new Set(budgets.map((b) => b.categoryName.toLowerCase()))
+      let created = 0
+      for (const k of Object.keys(latest)) {
+        if (here.has(k)) continue
+        const b = latest[k]
+        await axios.post(
+          `${apiUrl}/collections/budgets/records`,
+          { category: b.category, budgetAmount: Number(b.budgetAmount) || 0, year, month, userId: auth.record.id },
+          { headers: { Authorization: `Bearer ${auth.token}` } }
+        )
+        created++
+      }
+      toast.success(created > 0 ? `Carried over ${created} budget${created === 1 ? '' : 's'}` : 'No previous budgets to carry over')
+      await fetchBudgetData()
+    } catch (e: any) {
+      toast.error('Carry over failed: ' + (e.response?.data?.message || e.message))
+    } finally {
+      setCarrying(false)
+    }
+  }
+
+  // Merge one budget category into another (folds budgets + moves transactions).
+  const doMerge = async () => {
+    if (!mergeFrom || !mergeTo || mergeFrom === mergeTo) return
+    setMerging(true)
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const { data } = await axios.post(`${apiUrl}/rpc/merge-category`, { from: mergeFrom, to: mergeTo }, { headers: { Authorization: `Bearer ${auth.token}` } })
+      toast.success(`Merged ${mergeFrom} into ${mergeTo} · ${data?.movedTxns || 0} transactions`)
+      setMergeOpen(false)
+      setMergeFrom('')
+      setMergeTo('')
+      await fetchBudgetData()
+    } catch (e: any) {
+      toast.error('Merge failed: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setMerging(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -311,12 +374,21 @@ export function Budget() {
             Zero-based budgeting · showing spend for {monthYear}
           </p>
           <p className="mt-1 text-body-sm text-ink-500">
-            Budgets carry forward every month — set them once.
+            Each month has its own budget — carry last month over or start fresh.
           </p>
         </div>
         {/* wrap, don't shrink-0: two full-width buttons side by side were
             575px wide and forced the whole page to scroll sideways. */}
         <div className="flex flex-wrap gap-2 sm:shrink-0">
+          {budgets.length > 1 && (
+            <button
+              onClick={() => setMergeOpen(true)}
+              className="btn-secondary py-2 px-4"
+              title="Combine two budget categories into one"
+            >
+              Merge
+            </button>
+          )}
           <button
             onClick={handleSuggestBudgets}
             disabled={suggesting}
@@ -452,11 +524,16 @@ export function Budget() {
       <div className="mt-8">
         {budgets.length === 0 ? (
           <div className="card p-12 text-center">
-            <p className="text-ink-400">No budgets set for this month</p>
-            <p className="mt-1 text-body-sm text-ink-500">Set a budget amount per category to start tracking</p>
-            <button onClick={openNewBudget} className="btn-primary mt-6 py-2 px-4">
-              + Set your first budget
-            </button>
+            <p className="text-ink-400">No budget for {monthYear} yet</p>
+            <p className="mt-1 text-body-sm text-ink-500">Start this month fresh, or carry over what you set last month.</p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
+              <button onClick={carryOver} disabled={carrying} className="btn-secondary py-2 px-4 disabled:opacity-50">
+                {carrying ? 'Carrying over…' : 'Carry over last month'}
+              </button>
+              <button onClick={openNewBudget} className="btn-primary py-2 px-4">
+                + Set a budget
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -615,6 +692,49 @@ export function Budget() {
         <p className="text-ink-300">
           Remove this budget? Your transactions in this category are not affected.
         </p>
+      </Modal>
+
+      {/* Merge budgets: fold one category into another (moves its transactions and
+          sums the budget amounts). Uses the same /rpc/merge-category as Categories. */}
+      <Modal
+        isOpen={mergeOpen}
+        onClose={() => setMergeOpen(false)}
+        title="Merge budget categories"
+        footer={
+          <div className="flex gap-3">
+            <button onClick={() => setMergeOpen(false)} className="btn-secondary flex-1">
+              Cancel
+            </button>
+            <button
+              onClick={doMerge}
+              disabled={merging || !mergeFrom || !mergeTo || mergeFrom === mergeTo}
+              className="btn-primary flex-1 disabled:opacity-50"
+            >
+              {merging ? 'Merging…' : 'Merge'}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-ink-300">
+          Move one category's transactions and budget into another. This affects every month.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+          <div>
+            <label className="block text-body-sm font-normal text-ink-200 mb-2">Merge this</label>
+            <select value={mergeFrom} onChange={(e) => setMergeFrom(e.target.value)} className="input-base w-full" aria-label="Category to merge from">
+              <option value="">Choose…</option>
+              {budgets.map((b) => <option key={b.id} value={b.categoryName}>{b.categoryName}</option>)}
+            </select>
+          </div>
+          <span className="hidden pb-2 text-ink-500 sm:block">→</span>
+          <div>
+            <label className="block text-body-sm font-normal text-ink-200 mb-2">Into this</label>
+            <select value={mergeTo} onChange={(e) => setMergeTo(e.target.value)} className="input-base w-full" aria-label="Category to merge into">
+              <option value="">Choose…</option>
+              {budgets.filter((b) => b.categoryName !== mergeFrom).map((b) => <option key={b.id} value={b.categoryName}>{b.categoryName}</option>)}
+            </select>
+          </div>
+        </div>
       </Modal>
 
       {drill && (() => {
