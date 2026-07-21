@@ -6,7 +6,8 @@ import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
 import { CategorySelect } from '../components/ui/CategorySelect'
 import { TransactionsModal } from '../components/ui/TransactionsModal'
-import { monthRange } from '../utils/dateRange'
+import { monthRange, formatDate } from '../utils/dateRange'
+import { merchantKey } from '../utils/merchant'
 import { averageMonthlySpend } from '../utils/budgetSuggest'
 import { txAmount } from '../utils/reportStats'
 import { fetchAllRecords } from '../utils/fetchAll'
@@ -53,6 +54,9 @@ export function Budget() {
   const [totalRecurring, setTotalRecurring] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showRecurringList, setShowRecurringList] = useState(false)
+  // Drill into a single vendor's transactions within a category, filtered
+  // client-side from the already-loaded month expenses (no extra fetch).
+  const [vendorDrill, setVendorDrill] = useState<{ key: string; label: string; category: string } | null>(null)
 
   useEffect(() => {
     fetchBudgetData()
@@ -556,7 +560,13 @@ export function Budget() {
                           const w = maxVendor > 0 ? (v.spent / maxVendor) * 100 : 0
                           const isRec = recurKeys.has(v.key)
                           return (
-                            <div key={v.key}>
+                            <button
+                              key={v.key}
+                              type="button"
+                              onClick={() => setVendorDrill({ key: v.key, label: v.label, category: budget.categoryName })}
+                              className="block w-full text-left rounded hover:opacity-80 transition-opacity"
+                              title={`See ${v.label} transactions`}
+                            >
                               <div className="flex items-center justify-between gap-2 text-body-sm">
                                 <span className="inline-flex min-w-0 items-center gap-1">
                                   <span className="truncate text-ink-300">{v.label}</span>
@@ -570,7 +580,7 @@ export function Budget() {
                                   style={{ width: `${w}%`, backgroundColor: isRec ? '#c4b5fd' : '#ff7a17' }}
                                 />
                               </div>
-                            </div>
+                            </button>
                           )
                         })
                       )}
@@ -620,6 +630,42 @@ export function Budget() {
             until={endExclusive}
             onClose={() => setDrill(null)}
           />
+        )
+      })()}
+
+      {/* Vendor drill: this merchant's transactions in this category, this month.
+          Filtered from the already-loaded monthTxns — same key as the breakdown. */}
+      {vendorDrill && (() => {
+        const rows = monthTxns.filter(
+          (t) =>
+            (t.category || 'Uncategorized') === vendorDrill.category &&
+            merchantKey(t.description || '') === vendorDrill.key
+        )
+        const total = rows.reduce((s, t) => s + txAmount(t), 0)
+        return (
+          <Modal isOpen onClose={() => setVendorDrill(null)} title={vendorDrill.label}>
+            <p className="text-body-sm text-ink-400 mb-3">
+              {vendorDrill.category} · {monthYear} · {rows.length} transaction{rows.length === 1 ? '' : 's'} · $
+              {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            {rows.length === 0 ? (
+              <p className="text-ink-400">No transactions found.</p>
+            ) : (
+              <div>
+                {rows.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between gap-3 py-2 border-b border-canvas-soft last:border-0">
+                    <div className="min-w-0">
+                      <p className="text-body-sm text-ink-200 truncate">{t.description || 'Transaction'}</p>
+                      <p className="text-body-sm text-ink-500">{formatDate(t.date)} · {t.category || 'Uncategorized'}</p>
+                    </div>
+                    <span className="shrink-0 text-body-sm text-accent-dusk">
+                      -${txAmount(t).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Modal>
         )
       })()}
     </div>

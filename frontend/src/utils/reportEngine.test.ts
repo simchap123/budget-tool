@@ -28,6 +28,18 @@ describe('groupTransactions — by category', () => {
     const { total } = groupTransactions(txns, 'category', 'net')
     expect(total).toBeCloseTo(2400 - 95.45)
   })
+
+  it('mixed sums income AND expense magnitudes (gross throughput) per category', () => {
+    const { rows, total } = groupTransactions(txns, 'category', 'mixed')
+    // Salary (income) leads, then Groceries, then Coffee — all by magnitude.
+    expect(rows.map((r) => [r.label, r.value, r.count])).toEqual([
+      ['Salary', 2400, 1],
+      ['Groceries', 84.2, 1],
+      ['Coffee', 11.25, 2],
+    ])
+    // Total money moved = every income and expense magnitude summed.
+    expect(total).toBeCloseTo(2400 + 95.45)
+  })
 })
 
 describe('groupTransactions — by vendor', () => {

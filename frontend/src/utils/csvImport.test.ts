@@ -46,6 +46,14 @@ describe('csvRowToTransaction', () => {
   it('normalizes a US-format date to a filterable value', () => {
     expect(csvRowToTransaction(H, ['07/17/2026', 'Store', '9', '', '', ''], 'u')!.date).toBe('2026-07-17 00:00:00.000Z')
   })
+
+  it('strips wrapping double-quote characters from the description', () => {
+    expect(csvRowToTransaction(H, ['2026-07-01', '"ZELLE PAYMENT TO X"', '25', '', '', ''], 'u')!.description).toBe('ZELLE PAYMENT TO X')
+  })
+
+  it('leaves inner quotes and other punctuation in the description intact', () => {
+    expect(csvRowToTransaction(H, ['2026-07-01', 'AMAZON.COM*A1B2 #500', '25', '', '', ''], 'u')!.description).toBe('AMAZON.COM*A1B2 #500')
+  })
 })
 
 import { hasSignedAmounts, amountColumnIndex } from './csvImport'

@@ -7,7 +7,7 @@ import { txAmount } from './reportStats'
 import { monthLabel } from './dateRange'
 
 export type GroupBy = 'category' | 'vendor' | 'month' | 'year'
-export type ValueType = 'expense' | 'income' | 'net'
+export type ValueType = 'expense' | 'income' | 'net' | 'mixed'
 
 export interface ReportTxn {
   id?: string
@@ -38,6 +38,9 @@ function contribution(t: ReportTxn, type: ValueType): number {
   const amt = txAmount(t)
   if (type === 'income') return t.type === 'income' ? amt : 0
   if (type === 'expense') return t.type === 'expense' ? amt : 0
+  // mixed: gross throughput — every income AND expense contributes its magnitude,
+  // so a row reflects total money moved regardless of direction.
+  if (type === 'mixed') return t.type === 'income' || t.type === 'expense' ? amt : 0
   // net: income positive, expense negative
   if (t.type === 'income') return amt
   if (t.type === 'expense') return -amt

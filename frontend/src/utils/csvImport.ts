@@ -26,11 +26,27 @@ export function hasSignedAmounts(headers: string[], rows: string[][]): boolean {
   return rows.some((r) => num(r[idx]) < 0)
 }
 
+// Canonicalize a description so cosmetic variants of the SAME transaction collapse
+// to one string for dedup: strips surrounding whitespace, removes double-quote
+// characters (a buggy earlier import wrapped descriptions in literal quotes),
+// collapses internal whitespace runs to a single space, and uppercases so casing
+// differences ("Zelle payment" vs "ZELLE PAYMENT") match. Deliberately conservative:
+// digits and meaningful punctuation are left intact so distinct payees stay distinct.
+export function normalizeDescription(s: string): string {
+  return String(s ?? '')
+    .replace(/"/g, '')      // drop double-quote characters (wrapping or stray)
+    .replace(/\s+/g, ' ')   // collapse internal whitespace runs to one space
+    .trim()
+    .toUpperCase()
+}
+
 // A transaction's identity for dedup: same day, amount, description and direction
 // is treated as the same transaction. Date is sliced to the day because the store
 // keeps a full timestamp ("2026-07-16 00:00:00.000Z") while imports carry "YYYY-MM-DD".
+// The description is normalized so case/whitespace/quote-wrapped variants of the same
+// transaction produce an identical signature and dedupe against each other.
 export function txnSignature(t: { date: string; amount: number; description: string; type: string }): string {
-  return `${String(t.date).slice(0, 10)}|${Number(t.amount).toFixed(2)}|${String(t.description).trim()}|${t.type}`
+  return `${String(t.date).slice(0, 10)}|${Number(t.amount).toFixed(2)}|${normalizeDescription(t.description)}|${t.type}`
 }
 
 // Split freshly-parsed rows into the ones NOT already in the account vs. how many
@@ -77,7 +93,9 @@ export function csvRowToTransaction(
     return ''
   }
 
-  const description = pick('description', 'name', 'memo', 'details', 'payee')
+  // Strip wrapping double-quote characters (a buggy earlier import stored
+  // descriptions wrapped in literal quotes) so newly-imported rows are clean.
+  const description = pick('description', 'name', 'memo', 'details', 'payee').replace(/^"+|"+$/g, '').trim()
   const dateStr = pick('transaction date', 'trans date', 'posting date', 'post date', 'date')
 
   let amount: number

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import axios from 'axios'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Pencil } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { CategorySelect } from '../components/ui/CategorySelect'
 import { useCategories } from '../hooks/useCategories'
@@ -28,6 +28,9 @@ export function VendorsPanel() {
   const [search, setSearch] = useState('')
   const [shown, setShown] = useState(PAGE)
   const [rebuilding, setRebuilding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  // Escape cancels the inline rename without the blur handler also saving it.
+  const escaped = useRef(false)
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const auth = () => JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -63,6 +66,21 @@ export function VendorsPanel() {
     } catch (e: any) {
       setVendors((vs) => vs.map((x) => (x.id === v.id ? { ...x, category: prev } : x)))
       toast.error('Failed: ' + (e.response?.data?.error || e.message))
+    }
+  }
+
+  const rename = async (v: Vendor, name: string) => {
+    const trimmed = name.trim()
+    setEditingId(null)
+    if (!trimmed || trimmed === v.name) return
+    const prev = v.name
+    setVendors((vs) => vs.map((x) => (x.id === v.id ? { ...x, name: trimmed } : x)))
+    try {
+      await axios.post(`${apiUrl}/vendors/rename`, { matchKey: v.matchKey, name: trimmed }, { headers: headers() })
+      toast.success(`Renamed to ${trimmed}`)
+    } catch (e: any) {
+      setVendors((vs) => vs.map((x) => (x.id === v.id ? { ...x, name: prev } : x)))
+      toast.error('Rename failed: ' + (e.response?.data?.error || e.message))
     }
   }
 
@@ -105,7 +123,34 @@ export function VendorsPanel() {
         {filtered.slice(0, shown).map((v) => (
           <div key={v.id} className="flex items-center gap-3 p-3">
             <div className="min-w-0 flex-1">
-              <p className="text-ink-100 truncate">{v.name}</p>
+              {editingId === v.id ? (
+                <input
+                  autoFocus
+                  defaultValue={v.name}
+                  onBlur={(e) => {
+                    if (escaped.current) { escaped.current = false; return }
+                    rename(v, e.target.value)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    if (e.key === 'Escape') { escaped.current = true; setEditingId(null) }
+                  }}
+                  className="input-base w-full py-1"
+                  aria-label={`Rename ${v.name}`}
+                />
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <p className="text-ink-100 truncate">{v.name}</p>
+                  <button
+                    onClick={() => setEditingId(v.id)}
+                    className="shrink-0 p-1 text-ink-500 hover:text-ink-200 transition-colors"
+                    title="Rename vendor"
+                    aria-label={`Rename ${v.name}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              )}
               <p className="text-body-sm text-ink-500 truncate">{v.count} transaction{v.count === 1 ? '' : 's'}</p>
             </div>
             <div className="w-48 shrink-0">

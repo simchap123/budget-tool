@@ -17,6 +17,12 @@ import { reportTotals, txAmount } from '../utils/reportStats'
 import { CategorySelect } from '../components/ui/CategorySelect'
 import { useCategories, invalidateCategories } from '../hooks/useCategories'
 import { merchantKey } from '../utils/merchant'
+import { runAutoCategorize } from '../utils/autoCategorize'
+
+// Whether a transaction still needs a category (empty or the "Uncategorized"
+// placeholder) — the predicate behind both the queue toggle and the button's
+// visibility.
+const isUncategorized = (txn: any) => !txn.category || txn.category === 'Uncategorized'
 
 // The merchant a transaction rolls up to — the same normalized key the Vendors
 // page groups on — title-cased for display next to the category.
@@ -39,6 +45,11 @@ export function Dashboard({ user }: { user: any }) {
   const [page, setPage] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
   const [search, setSearch] = useState('')
+  // The "uncategorized queue" toggle: filter the list down to rows still needing
+  // a category so they can be cleared out one by one.
+  const [onlyUncategorized, setOnlyUncategorized] = useState(false)
+  // True while a bulk auto-categorize run is in flight (disables the button).
+  const [autoCat, setAutoCat] = useState(false)
   // Which mobile row is swiped open (only ever one), and which transaction the
   // quick-category sheet is currently editing.
   const [swipedId, setSwipedId] = useState<string | null>(null)
@@ -254,6 +265,28 @@ export function Dashboard({ user }: { user: any }) {
     }
   }
 
+  // Bulk-categorize every uncategorized transaction via the AI endpoint. The
+  // driver loops the backend until the queue drains; we surface progress as
+  // toasts, then refetch and refresh the category dropdowns.
+  const handleAutoCategorize = async () => {
+    setAutoCat(true)
+    toast.info('Categorizing…')
+    try {
+      const total = await runAutoCategorize((done) => {
+        if (done > 0) toast.info(`Categorizing… ${done} done`)
+      })
+      await fetchTransactions()
+      invalidateCategories()
+      if (total > 0) toast.success(`Categorized ${total} transaction${total === 1 ? '' : 's'}`)
+      else toast.info('No new categories found')
+    } catch (err) {
+      console.error('Auto-categorize failed:', err)
+      toast.error('Could not auto-categorize')
+    } finally {
+      setAutoCat(false)
+    }
+  }
+
   const handleExport = async () => {
     try {
       const { downloadXlsx } = await import('../utils/xlsx')
@@ -268,8 +301,13 @@ export function Dashboard({ user }: { user: any }) {
   // Same tested money math as Reports (single source of truth for summing amounts).
   const totals = reportTotals(transactions)
   const stats = { income: totals.income, expenses: totals.expense, net: totals.net }
-  // Search filters the displayed list (monthly totals above stay for the month).
-  const filtered = filterTransactions(transactions as any[], search)
+  // How many transactions in the current month still need a category — drives
+  // both the "Categorize uncategorized" button and the queue toggle.
+  const uncategorizedCount = (transactions as any[]).filter(isUncategorized).length
+  // Search filters the displayed list (monthly totals above stay for the month);
+  // the queue toggle narrows it further to only rows needing a category.
+  const searched = filterTransactions(transactions as any[], search)
+  const filtered = onlyUncategorized ? searched.filter(isUncategorized) : searched
   const totalPages = Math.max(1, Math.ceil(filtered.length / 25))
   // Shared by the mobile card list and the desktop table so the two views
   // can never drift out of sync on paging.
@@ -338,6 +376,16 @@ export function Dashboard({ user }: { user: any }) {
             >
               {importOpen ? 'Cancel' : '📤 Import CSV'}
             </button>
+            {uncategorizedCount > 0 && (
+              <button
+                onClick={handleAutoCategorize}
+                disabled={autoCat}
+                className="btn-secondary px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={`Auto-categorize the ${uncategorizedCount} uncategorized transaction${uncategorizedCount === 1 ? '' : 's'} this month`}
+              >
+                {autoCat ? 'Categorizing…' : `✨ Categorize uncategorized (${uncategorizedCount})`}
+              </button>
+            )}
             {transactions.length > 0 && (
               <button
                 onClick={handleExport}
@@ -352,9 +400,20 @@ export function Dashboard({ user }: { user: any }) {
 
         {importOpen && (
           <div className="mt-6">
-            <CSVImport onImportComplete={() => {
+            <CSVImport onImportComplete={async () => {
               setImportOpen(false)
-              fetchTransactions()
+              await fetchTransactions()
+              // Auto-categorize freshly imported rows so the queue starts clean.
+              try {
+                const total = await runAutoCategorize()
+                if (total > 0) {
+                  await fetchTransactions()
+                  invalidateCategories()
+                  toast.success(`Auto-categorized ${total} imported transaction${total === 1 ? '' : 's'}`)
+                }
+              } catch (err) {
+                console.error('Post-import auto-categorize failed:', err)
+              }
             }} />
           </div>
         )}
@@ -473,17 +532,33 @@ export function Dashboard({ user }: { user: any }) {
           />
         ) : (
           <>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search transactions by description or category…"
-              aria-label="Search transactions"
-              className="input-base mt-2"
-            />
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                placeholder="Search transactions by description or category…"
+                aria-label="Search transactions"
+                className="input-base flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => { setOnlyUncategorized((v) => !v); setPage(1) }}
+                aria-pressed={onlyUncategorized}
+                className={`inline-flex items-center justify-center min-h-touch px-4 text-body-sm rounded-sm border transition-colors ${
+                  onlyUncategorized
+                    ? 'border-accent-sunset bg-accent-sunset/10 text-accent-sunset'
+                    : 'border-ink-700 text-ink-400 hover:text-ink-200'
+                }`}
+              >
+                {onlyUncategorized ? '✓ Only uncategorized' : 'Show only uncategorized'}
+              </button>
+            </div>
             {filtered.length === 0 ? (
               <div className="card p-8 text-center text-ink-400 mt-4">
-                No transactions match &ldquo;{search}&rdquo;.
+                {onlyUncategorized && !search
+                  ? 'Everything this month is categorized. 🎉'
+                  : <>No transactions match &ldquo;{search}&rdquo;.</>}
               </div>
             ) : (
           <>

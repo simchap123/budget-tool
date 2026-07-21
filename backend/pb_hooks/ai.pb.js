@@ -130,3 +130,127 @@ routerAdd("POST", "/api/ai/insights", (c) => {
     return c.json(200, { narrative: "", habits: [], source: "error", detail: String((err && err.message) || err) });
   }
 }, $apis.requireRecordAuth());
+
+// POST /api/ai/categorize-uncategorized  ->  { updated, remaining }
+//
+// Bulk-categorizes the caller's uncategorized transactions. Same two-tier
+// strategy as suggest-category, applied in batch:
+//   1) HISTORY: for each uncategorized txn, look at its strongest merchant
+//      tokens and reuse the category the user has most often given the same
+//      merchant. Free, instant, personalized.
+//   2) GEMINI: whatever history can't place is sent to Gemini in groups of 40,
+//      biased toward the user's existing categories.
+// Processes up to 80 txns per call; the frontend loops until `remaining` is 0.
+// Never 500s — any failure returns {updated:0, error} so the caller can stop.
+routerAdd("POST", "/api/ai/categorize-uncategorized", (c) => {
+  try {
+    const { merchantTokens } = require(`${__hooks}/ai_lib.js`);
+
+    const info = $apis.requestInfo(c);
+    const user = info.authRecord;
+    const dao = $app.dao();
+
+    // The queue: the caller's uncategorized transactions, newest first.
+    const pending = dao.findRecordsByFilter(
+      "transactions",
+      "userId = {:u} && (category = '' || category = 'Uncategorized')",
+      "-date", 80, 0, { u: user.id }
+    );
+    const fetchedCount = pending.length;
+    if (!fetchedCount) return c.json(200, { updated: 0, remaining: 0 });
+
+    // The user's known categories (from their already-categorized history),
+    // used both to bias Gemini and — via history matching — to place merchants
+    // they've labeled before.
+    const known = dao.findRecordsByFilter(
+      "transactions",
+      "userId = {:u} && category != '' && category != 'Uncategorized'",
+      "-created", 500, 0, { u: user.id }
+    );
+    const catSeen = {};
+    known.forEach(function (r) { catSeen[r.get("category")] = 1; });
+    const catList = Object.keys(catSeen).slice(0, 60);
+
+    var updated = 0;
+    const needsAi = [];
+
+    // Tier 1: history match on the strongest merchant tokens.
+    for (let p = 0; p < pending.length; p++) {
+      const txn = pending[p];
+      const desc = txn.get("description") || "";
+      const tokens = merchantTokens(desc);
+      let best = "";
+      for (let i = 0; i < Math.min(tokens.length, 3) && !best; i++) {
+        const matches = dao.findRecordsByFilter(
+          "transactions",
+          "userId = {:u} && description ~ {:token} && category != '' && category != 'Uncategorized'",
+          "-created", 60, 0, { u: user.id, token: tokens[i] }
+        );
+        if (matches.length) {
+          const counts = {};
+          matches.forEach(function (m) {
+            const cat = m.get("category");
+            counts[cat] = (counts[cat] || 0) + 1;
+          });
+          let n = 0;
+          for (const k in counts) if (counts[k] > n) { n = counts[k]; best = k; }
+        }
+      }
+      if (best) {
+        txn.set("category", best);
+        dao.saveRecord(txn);
+        updated++;
+      } else {
+        needsAi.push(txn);
+      }
+    }
+
+    // Tier 2: Gemini for whatever history couldn't place, in batches of 40.
+    const key = $os.getenv("GEMINI_API_KEY");
+    if (key && needsAi.length) {
+      for (let start = 0; start < needsAi.length; start += 40) {
+        const batch = needsAi.slice(start, start + 40);
+        const lines = batch
+          .map(function (t, idx) { return (idx + 1) + ". " + (t.get("description") || ""); })
+          .join("\n");
+        const prompt =
+          "You categorize bank transactions into short budget categories. " +
+          "Prefer one of the user's existing categories if it fits: [" + catList.join(", ") + "]. " +
+          'For each numbered transaction below output a JSON array of {"i":number,"category":string}, ' +
+          "concise (1-2 words). Transactions:\n" + lines;
+        try {
+          const res = $http.send({
+            url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+            method: "POST",
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2 },
+            }),
+            headers: { "Content-Type": "application/json" },
+            timeout: 40,
+          });
+          if (res.statusCode === 200 && res.json && res.json.candidates) {
+            let text = (res.json.candidates[0].content.parts[0].text || "").replace(/```json|```/g, "").trim();
+            const arr = JSON.parse(text);
+            if (Array.isArray(arr)) {
+              arr.forEach(function (item) {
+                const idx = Number(item && item.i) - 1;
+                const cat = String((item && item.category) || "").trim();
+                if (cat && idx >= 0 && idx < batch.length) {
+                  batch[idx].set("category", cat);
+                  dao.saveRecord(batch[idx]);
+                  updated++;
+                }
+              });
+            }
+          }
+        } catch (e) { /* skip this batch, keep going */ }
+      }
+    }
+
+    const remaining = Math.max(0, fetchedCount - updated);
+    return c.json(200, { updated: updated, remaining: remaining });
+  } catch (err) {
+    return c.json(200, { updated: 0, error: String((err && err.message) || err) });
+  }
+}, $apis.requireRecordAuth());

@@ -8,7 +8,7 @@ import { resolveRange, RANGE_OPTIONS, RangePreset, yearsInRange } from '../utils
 import { TxnListModal } from '../components/ui/TxnListModal'
 import { downloadXlsx } from '../utils/xlsx'
 import { buildReportSheets, buildBudgetSheets } from '../utils/reportExport'
-import { buildIncomeStatement, incomeStatementSheet } from '../utils/incomeStatement'
+import { IncomeStatementModal } from '../components/ui/IncomeStatementModal'
 import { useToast } from '../components/ui/Toast'
 
 type Grouping = GroupBy | 'budget'
@@ -25,6 +25,7 @@ const VALUE_OPTIONS: { value: ValueType; label: string }[] = [
   { value: 'expense', label: 'Spending' },
   { value: 'income', label: 'Income' },
   { value: 'net', label: 'Net' },
+  { value: 'mixed', label: 'Mixed (all)' },
 ]
 
 const COLORS = ['#f97316', '#06b6d4', '#10b981', '#eab308', '#a855f7', '#ec4899', '#3b82f6', '#f59e0b', '#84cc16', '#14b8a6', '#f43f5e', '#8b5cf6']
@@ -59,6 +60,7 @@ export function Reports() {
   const [customEnd, setCustomEnd] = useState('')
 
   const [drill, setDrill] = useState<{ title: string; subtitle: string; txns: any[] } | null>(null)
+  const [statement, setStatement] = useState<{ mode: 'month' | 'year'; year: number; txns: any[] } | null>(null)
   const [exporting, setExporting] = useState(false)
   const toast = useToast()
 
@@ -182,23 +184,19 @@ export function Reports() {
     }
   }
 
-  // Income Statement (P&L) exports: month-by-month for a year, or year-by-year.
-  // Pulls the full history (independent of the range control) so the statement
-  // is complete.
-  const exportStatement = async (mode: 'month' | 'year') => {
+  // Income Statement (P&L): open the on-screen, drillable viewer (with its own
+  // Excel export). Pulls the full history so the statement is complete.
+  const openStatement = async (mode: 'month' | 'year') => {
     setExporting(true)
     try {
       const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
       const all = await fetchAllRecords(apiUrl, 'transactions', 'sort=date', { Authorization: `Bearer ${auth.token}` })
       const year = range.start ? parseInt(range.start.slice(0, 4), 10) : new Date().getFullYear()
-      const is = buildIncomeStatement(all, mode, year)
-      const sheetName = mode === 'month' ? `Income Statement ${year}` : 'Income Statement by year'
-      const file = mode === 'month' ? `income-statement-${year}-monthly.xlsx` : 'income-statement-yearly.xlsx'
-      await downloadXlsx([incomeStatementSheet(is, sheetName)], file)
+      setStatement({ mode, year, txns: all })
     } catch (err) {
-      console.error('Statement export failed:', err)
-      toast.error('Could not generate the income statement')
+      console.error('Statement load failed:', err)
+      toast.error('Could not load the income statement')
     } finally {
       setExporting(false)
     }
@@ -225,6 +223,16 @@ export function Reports() {
     setDrill({ title: label, subtitle: `${range.label} · transactions`, txns: txnsForRow(gb, key) })
   }
 
+  // A category edit inside the drill-down should flow back into the loaded rows
+  // so the chart and table re-group immediately (the modal keeps its own copy in
+  // sync too). Update the drill snapshot as well so it stays consistent if reused.
+  const handleTxnChanged = (id: string, category: string) => {
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)))
+    setDrill((prev) =>
+      prev ? { ...prev, txns: prev.txns.map((t) => (t.id === id ? { ...t, category } : t)) } : prev
+    )
+  }
+
   const openBudgetDrill = (category: string) => {
     const txns = transactions.filter((t) => t.type === 'expense' && (t.category || 'Uncategorized') === category)
     setDrill({ title: category, subtitle: `${range.label} · spending`, txns })
@@ -248,18 +256,18 @@ export function Reports() {
             {exporting ? 'Preparing…' : 'Export report'}
           </button>
           <button
-            onClick={() => exportStatement('month')}
+            onClick={() => openStatement('month')}
             disabled={exporting}
             className="btn-secondary px-4"
-            title="Income statement: categories by month for the selected year"
+            title="Income statement: categories by month for the selected year — view then export"
           >
-            <Download size={16} className="mr-2" /> P&amp;L · monthly
+            P&amp;L · monthly
           </button>
           <button
-            onClick={() => exportStatement('year')}
+            onClick={() => openStatement('year')}
             disabled={exporting}
             className="btn-secondary px-4"
-            title="Income statement: categories by year"
+            title="Income statement: categories by year — view then export"
           >
             <Download size={16} className="mr-2" /> P&amp;L · yearly
           </button>
@@ -445,7 +453,11 @@ export function Reports() {
       )}
 
       {drill && (
-        <TxnListModal title={drill.title} subtitle={drill.subtitle} txns={drill.txns} onClose={() => setDrill(null)} />
+        <TxnListModal title={drill.title} subtitle={drill.subtitle} txns={drill.txns} onChanged={handleTxnChanged} onClose={() => setDrill(null)} />
+      )}
+
+      {statement && (
+        <IncomeStatementModal mode={statement.mode} year={statement.year} txns={statement.txns} onClose={() => setStatement(null)} />
       )}
     </div>
   )
