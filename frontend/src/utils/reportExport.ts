@@ -15,14 +15,15 @@ export interface ReportExportInput {
   rows: ReportRow[]
   total: number
   years: number // fractional years in range, for avg/year
-  showAvgPerYear: boolean // only meaningful for category / vendor
+  months: number // calendar months in range, for avg/month
+  showAvgPerYear: boolean // per-bucket averages only meaningful for category / vendor
   txns: any[]
   totals: { income: number; expense: number; net: number; savingsRate: number; count: number }
 }
 
 // Breakdown + Summary + Transactions sheets for a grouped (non-budget) report.
 export function buildReportSheets(input: ReportExportInput): XlsxSheet[] {
-  const { groupLabel, valueLabel, rangeLabel, rows, total, years, showAvgPerYear, txns, totals } = input
+  const { groupLabel, valueLabel, rangeLabel, rows, total, years, months, showAvgPerYear, txns, totals } = input
 
   const summary: XlsxSheet = {
     name: 'Summary',
@@ -48,6 +49,7 @@ export function buildReportSheets(input: ReportExportInput): XlsxSheet[] {
     { header: '% of total', key: 'pct', width: 12 },
   ]
   if (showAvgPerYear) {
+    breakdownColumns.push({ header: 'Avg / month', key: 'avgPerMonth', width: 16, numFmt: MONEY })
     breakdownColumns.push({ header: 'Avg / year', key: 'avgPerYear', width: 16, numFmt: MONEY })
   }
 
@@ -61,7 +63,10 @@ export function buildReportSheets(input: ReportExportInput): XlsxSheet[] {
         value: round2(r.value),
         pct: total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(total)) * 100)}%` : '—',
       }
-      if (showAvgPerYear) row.avgPerYear = round2(r.value / years)
+      if (showAvgPerYear) {
+        row.avgPerMonth = round2(r.value / months)
+        row.avgPerYear = round2(r.value / years)
+      }
       return row
     }),
   }

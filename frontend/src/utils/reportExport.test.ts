@@ -17,6 +17,7 @@ describe('buildReportSheets', () => {
     ],
     total: 150,
     years: 0.5,
+    months: 6,
     showAvgPerYear: true,
     txns,
     totals: { income: 2400, expense: 150, net: 2250, savingsRate: 93.75, count: 2 },
@@ -26,11 +27,13 @@ describe('buildReportSheets', () => {
     expect(sheets.map((s) => s.name)).toEqual(['Summary', 'Spending by Category', 'Transactions'])
   })
 
-  it('adds an Avg / year column and annualizes by the year fraction', () => {
+  it('adds Avg / month and Avg / year columns', () => {
     const breakdown = sheets[1]
+    expect(breakdown.columns.some((c) => c.key === 'avgPerMonth')).toBe(true)
     expect(breakdown.columns.some((c) => c.key === 'avgPerYear')).toBe(true)
-    // 100 over 0.5 years = 200/yr
+    // 100 over 6 months = ~16.67/mo; over 0.5 years = 200/yr
     expect(breakdown.rows[0]).toMatchObject({ label: 'Coffee', value: 100, avgPerYear: 200 })
+    expect((breakdown.rows[0] as any).avgPerMonth).toBeCloseTo(16.67, 1)
   })
 
   it('computes % of total', () => {
@@ -41,7 +44,7 @@ describe('buildReportSheets', () => {
   it('omits Avg / year when showAvgPerYear is false', () => {
     const s = buildReportSheets({
       groupLabel: 'Month', valueLabel: 'Spending', rangeLabel: '2026', rows: [], total: 0,
-      years: 1, showAvgPerYear: false, txns: [], totals: { income: 0, expense: 0, net: 0, savingsRate: 0, count: 0 },
+      years: 1, months: 12, showAvgPerYear: false, txns: [], totals: { income: 0, expense: 0, net: 0, savingsRate: 0, count: 0 },
     })
     expect(s[1].columns.some((c) => c.key === 'avgPerYear')).toBe(false)
   })

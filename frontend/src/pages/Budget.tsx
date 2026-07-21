@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Repeat } from 'lucide-react'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
 import { BudgetProgressBar } from '../components/ui/BudgetProgressBar'
@@ -10,6 +10,13 @@ import { monthRange } from '../utils/dateRange'
 import { averageMonthlySpend } from '../utils/budgetSuggest'
 import { txAmount } from '../utils/reportStats'
 import { fetchAllRecords } from '../utils/fetchAll'
+import {
+  vendorSpendInCategory,
+  recurringByCategory,
+  recurringKeySet,
+  totalMonthlyRecurring,
+  CategoryRecurring,
+} from '../utils/budgetInsights'
 
 interface Budget {
   id: string
@@ -37,10 +44,40 @@ export function Budget() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [suggesting, setSuggesting] = useState(false)
   const [drill, setDrill] = useState<string | null>(null)
+  // Raw current-month expenses (for the per-category vendor breakdown), plus a
+  // 6-month view of recurring charges mapped to their categories.
+  const [monthTxns, setMonthTxns] = useState<any[]>([])
+  const [recurByCat, setRecurByCat] = useState<Record<string, CategoryRecurring>>({})
+  const [recurKeys, setRecurKeys] = useState<Set<string>>(new Set())
+  const [totalRecurring, setTotalRecurring] = useState(0)
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   useEffect(() => {
     fetchBudgetData()
   }, [currentDate])
+
+  // Recurring is a trailing-6-month concept, independent of the selected month.
+  useEffect(() => {
+    const loadRecurring = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+        const apiUrl = import.meta.env.VITE_API_URL || '/api'
+        const since = new Date()
+        since.setMonth(since.getMonth() - 6)
+        const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-01`
+        const filter = encodeURIComponent(`(date>='${sinceStr}'&&type='expense')`)
+        const items = await fetchAllRecords(apiUrl, 'transactions', `filter=${filter}&sort=date`, {
+          Authorization: `Bearer ${auth.token}`,
+        })
+        setRecurByCat(recurringByCategory(items))
+        setRecurKeys(recurringKeySet(items))
+        setTotalRecurring(totalMonthlyRecurring(items))
+      } catch {
+        /* recurring is additive — ignore failures */
+      }
+    }
+    loadRecurring()
+  }, [])
 
   const fetchBudgetData = async () => {
     try {
@@ -70,6 +107,7 @@ export function Budget() {
       ])
 
       const txns = transactionResponse.data.items || []
+      setMonthTxns(txns) // kept raw for the per-category vendor breakdown
       const categorySpent: { [key: string]: number } = {}
       txns.forEach((txn: any) => {
         const key = txn.category || 'Uncategorized'
@@ -360,6 +398,22 @@ export function Budget() {
         </div>
       </div>
 
+      {/* Recurring / fixed — the committed part of the plan */}
+      {totalRecurring > 0 && (
+        <div className="mt-4 card p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Repeat size={18} className="text-accent-twilight" />
+              <p className="text-body-sm text-ink-400">Recurring &amp; bills each month</p>
+            </div>
+            <p className="text-xl font-normal text-accent-twilight">${totalRecurring.toFixed(0)}<span className="text-body-sm text-ink-500">/mo</span></p>
+          </div>
+          <p className="mt-1 text-body-sm text-ink-500">
+            Detected subscriptions &amp; bills — the fixed part of your budget that repeats every month.
+          </p>
+        </div>
+      )}
+
       {/* Budget Items */}
       <div className="mt-8">
         {budgets.length === 0 ? (
@@ -375,6 +429,10 @@ export function Budget() {
             {budgets.map((budget) => {
               const spent = transactions.find((t) => t.categoryName === budget.categoryName)?.spent || 0
               const percent = budget.budgetAmount > 0 ? (spent / budget.budgetAmount) * 100 : 0
+              const rec = recurByCat[budget.categoryName]
+              const isOpen = expanded === budget.categoryName
+              const vendors = isOpen ? vendorSpendInCategory(monthTxns, budget.categoryName) : []
+              const maxVendor = vendors.reduce((m, v) => Math.max(m, v.spent), 0)
 
               return (
                 <div key={budget.id} className="card p-4">
@@ -389,8 +447,13 @@ export function Budget() {
                       <p className="mt-1 text-body-sm text-ink-400">
                         ${spent.toFixed(2)} of ${budget.budgetAmount.toFixed(2)}
                       </p>
+                      {rec && (
+                        <span className="mt-1 inline-flex items-center gap-1 text-body-sm text-accent-twilight">
+                          <Repeat size={12} /> ${rec.monthly.toFixed(0)}/mo recurring
+                        </span>
+                      )}
                     </button>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <p className={`text-body-sm font-normal ${
                         percent > 100 ? 'text-red-400' :
                         percent > 90 ? 'text-yellow-400' :
@@ -421,6 +484,48 @@ export function Budget() {
                       'green'
                     } />
                   </div>
+
+                  {/* Thermometer by vendor: which merchants make up this category */}
+                  {spent > 0 && (
+                    <button
+                      onClick={() => setExpanded(isOpen ? null : budget.categoryName)}
+                      aria-expanded={isOpen}
+                      className="mt-2 inline-flex min-h-touch items-center gap-1 text-body-sm text-ink-500 hover:text-ink-300"
+                    >
+                      <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      {isOpen ? 'Hide vendors' : 'By vendor'}
+                    </button>
+                  )}
+
+                  {isOpen && (
+                    <div className="mt-2 space-y-2 border-t border-ink-700 pt-3">
+                      {vendors.length === 0 ? (
+                        <p className="text-body-sm text-ink-500">No spending in this category this month.</p>
+                      ) : (
+                        vendors.map((v) => {
+                          const w = maxVendor > 0 ? (v.spent / maxVendor) * 100 : 0
+                          const isRec = recurKeys.has(v.key)
+                          return (
+                            <div key={v.key}>
+                              <div className="flex items-center justify-between gap-2 text-body-sm">
+                                <span className="inline-flex min-w-0 items-center gap-1">
+                                  <span className="truncate text-ink-300">{v.label}</span>
+                                  {isRec && <Repeat size={11} className="shrink-0 text-accent-twilight" aria-label="recurring" />}
+                                </span>
+                                <span className="shrink-0 text-ink-200">${v.spent.toFixed(2)}</span>
+                              </div>
+                              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${w}%`, backgroundColor: isRec ? '#c4b5fd' : '#ff7a17' }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}

@@ -161,6 +161,7 @@ export function Reports() {
             rows: grouped.rows,
             total: grouped.total,
             years,
+            months: rangeMonths,
             showAvgPerYear,
             txns: transactions,
             totals,
@@ -368,6 +369,7 @@ export function Reports() {
                     <th>{GROUP_OPTIONS.find((g) => g.value === groupBy)?.label}</th>
                     <th className="text-right">Transactions</th>
                     <th className="text-right">{VALUE_OPTIONS.find((v) => v.value === valueType)?.label}</th>
+                    {showAvgPerYear && <th className="text-right">Avg / month</th>}
                     {showAvgPerYear && <th className="text-right">Avg / year</th>}
                     <th className="text-right">% of total</th>
                   </tr>
@@ -387,6 +389,7 @@ export function Reports() {
                       </td>
                       <td className="text-right text-ink-400">{r.count}</td>
                       <td className={`text-right font-medium ${r.value >= 0 ? 'text-ink-100' : 'text-accent-dusk'}`}>{money(r.value)}</td>
+                      {showAvgPerYear && <td className="text-right text-ink-300">{money(r.value / rangeMonths)}</td>}
                       {showAvgPerYear && <td className="text-right text-ink-300">{money(r.value / years)}</td>}
                       <td className="text-right text-ink-500">
                         {grouped.total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(grouped.total)) * 100)}%` : '—'}
