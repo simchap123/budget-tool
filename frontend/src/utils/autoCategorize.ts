@@ -9,7 +9,8 @@ import axios from 'axios'
 // forever: stop when a call makes no progress (`updated === 0`), and a hard cap
 // on iterations.
 
-const MAX_ITERATIONS = 15
+// 80 txns/batch; a large backlog (a full imported history) can need many rounds.
+const MAX_ITERATIONS = 60
 
 // Pure loop-termination predicate, exported so the loop logic is unit-testable
 // without any network. Returns true when we should make another request.

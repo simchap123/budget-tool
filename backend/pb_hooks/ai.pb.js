@@ -248,7 +248,19 @@ routerAdd("POST", "/api/ai/categorize-uncategorized", (c) => {
       }
     }
 
-    const remaining = Math.max(0, fetchedCount - updated);
+    // TRUE remaining across the whole account (not just this batch), so the
+    // frontend loop keeps sweeping until every uncategorized txn is drained —
+    // not just the first 80.
+    let remaining = 0;
+    try {
+      remaining = dao.findRecordsByFilter(
+        "transactions",
+        "userId = {:u} && (category = '' || category = 'Uncategorized')",
+        "-date", 100000, 0, { u: user.id }
+      ).length;
+    } catch (e) {
+      remaining = Math.max(0, fetchedCount - updated);
+    }
     return c.json(200, { updated: updated, remaining: remaining });
   } catch (err) {
     return c.json(200, { updated: 0, error: String((err && err.message) || err) });

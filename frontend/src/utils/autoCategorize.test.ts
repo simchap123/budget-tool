@@ -16,8 +16,8 @@ describe('shouldContinue — auto-categorize loop termination', () => {
   })
 
   it('stops once the hard iteration cap is reached', () => {
-    expect(shouldContinue(10, 100, 15)).toBe(false)
-    expect(shouldContinue(10, 100, 16)).toBe(false)
+    expect(shouldContinue(10, 100, 60)).toBe(false) // at the cap → stop
+    expect(shouldContinue(10, 100, 59)).toBe(true) // below the cap, still progressing → continue
   })
 
   it('continues while making progress and work remains under the cap', () => {

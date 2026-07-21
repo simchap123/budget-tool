@@ -1,6 +1,10 @@
-import { Landmark, Tags, HandHeart, LogOut, ChevronRight, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { Landmark, Tags, HandHeart, LogOut, ChevronRight, Sparkles, Wand2 } from 'lucide-react'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { BankConnections } from '../components/BankConnections'
+import { useToast } from '../components/ui/Toast'
+import { runAutoCategorize } from '../utils/autoCategorize'
+import { invalidateCategories } from '../hooks/useCategories'
 
 // Central place for account-level configuration. Bank linking lives here rather
 // than on the Dashboard, which is a working surface — connecting a bank is a
@@ -16,6 +20,24 @@ export function Settings({
   onLogout: () => void
   onStartSetup?: () => void
 }) {
+  const toast = useToast()
+  const [categorizing, setCategorizing] = useState(false)
+
+  // All-time sweep: categorizes every uncategorized transaction in the account
+  // (not just the current month), history + AI, looping until the queue is empty.
+  const sweepCategorize = async () => {
+    setCategorizing(true)
+    try {
+      const total = await runAutoCategorize((n) => toast.info(`Categorizing… ${n} done`))
+      invalidateCategories()
+      toast.success(total > 0 ? `Categorized ${total} transaction${total === 1 ? '' : 's'}` : 'Nothing left to categorize')
+    } catch (e: any) {
+      toast.error('Categorization failed: ' + (e?.response?.data?.error || e?.message || 'unknown'))
+    } finally {
+      setCategorizing(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div>
@@ -37,6 +59,20 @@ export function Settings({
           <ChevronRight size={18} className="shrink-0 text-ink-500" />
         </button>
       )}
+
+      {/* All-time AI categorization sweep */}
+      <button
+        onClick={sweepCategorize}
+        disabled={categorizing}
+        className="mt-4 flex w-full items-center gap-3 rounded-sm border border-accent-twilight/40 bg-accent-twilight/10 p-4 text-left transition-colors hover:bg-accent-twilight/15 disabled:opacity-60"
+      >
+        <Wand2 size={20} className="shrink-0 text-accent-twilight" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-ink-100">{categorizing ? 'Categorizing…' : 'Categorize all uncategorized (AI)'}</span>
+          <span className="block text-body-sm text-ink-400">Sweeps every uncategorized transaction across all months — history first, then AI</span>
+        </span>
+        <ChevronRight size={18} className="shrink-0 text-ink-500" />
+      </button>
 
       {/* Banks */}
       <section className="mt-8">
