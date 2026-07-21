@@ -8,6 +8,7 @@ import { resolveRange, RANGE_OPTIONS, RangePreset, yearsInRange } from '../utils
 import { TxnListModal } from '../components/ui/TxnListModal'
 import { downloadXlsx } from '../utils/xlsx'
 import { buildReportSheets, buildBudgetSheets } from '../utils/reportExport'
+import { buildIncomeStatement, incomeStatementSheet } from '../utils/incomeStatement'
 import { useToast } from '../components/ui/Toast'
 
 type Grouping = GroupBy | 'budget'
@@ -29,7 +30,7 @@ const VALUE_OPTIONS: { value: ValueType; label: string }[] = [
 const COLORS = ['#f97316', '#06b6d4', '#10b981', '#eab308', '#a855f7', '#ec4899', '#3b82f6', '#f59e0b', '#84cc16', '#14b8a6', '#f43f5e', '#8b5cf6']
 const CHART_LIMIT = 12
 
-const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`
+const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 // How many calendar months a range covers — used to scale monthly budgets (which
 // carry forward) up to the selected window for a fair budget-vs-actual compare.
@@ -181,6 +182,28 @@ export function Reports() {
     }
   }
 
+  // Income Statement (P&L) exports: month-by-month for a year, or year-by-year.
+  // Pulls the full history (independent of the range control) so the statement
+  // is complete.
+  const exportStatement = async (mode: 'month' | 'year') => {
+    setExporting(true)
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      const all = await fetchAllRecords(apiUrl, 'transactions', 'sort=date', { Authorization: `Bearer ${auth.token}` })
+      const year = range.start ? parseInt(range.start.slice(0, 4), 10) : new Date().getFullYear()
+      const is = buildIncomeStatement(all, mode, year)
+      const sheetName = mode === 'month' ? `Income Statement ${year}` : 'Income Statement by year'
+      const file = mode === 'month' ? `income-statement-${year}-monthly.xlsx` : 'income-statement-yearly.xlsx'
+      await downloadXlsx([incomeStatementSheet(is, sheetName)], file)
+    } catch (err) {
+      console.error('Statement export failed:', err)
+      toast.error('Could not generate the income statement')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Bars are horizontal for category/vendor (long labels) and vertical for the
   // month/year time series.
   const horizontal = groupBy === 'category' || groupBy === 'vendor'
@@ -208,21 +231,39 @@ export function Reports() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-display-lg">Reports</h1>
           <p className="mt-2 text-ink-400">Break your money down any way you like</p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting || transactions.length === 0}
-          className="btn-secondary self-start px-4 sm:shrink-0"
-          title="Download this report as an Excel workbook"
-        >
-          <Download size={16} className="mr-2" />
-          {exporting ? 'Preparing…' : 'Export Excel'}
-        </button>
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
+          <button
+            onClick={handleExport}
+            disabled={exporting || transactions.length === 0}
+            className="btn-secondary px-4"
+            title="Download the current report as an Excel workbook"
+          >
+            <Download size={16} className="mr-2" />
+            {exporting ? 'Preparing…' : 'Export report'}
+          </button>
+          <button
+            onClick={() => exportStatement('month')}
+            disabled={exporting}
+            className="btn-secondary px-4"
+            title="Income statement: categories by month for the selected year"
+          >
+            <Download size={16} className="mr-2" /> P&amp;L · monthly
+          </button>
+          <button
+            onClick={() => exportStatement('year')}
+            disabled={exporting}
+            className="btn-secondary px-4"
+            title="Income statement: categories by year"
+          >
+            <Download size={16} className="mr-2" /> P&amp;L · yearly
+          </button>
+        </div>
       </div>
 
       {/* Controls */}

@@ -136,7 +136,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div>
         <h1 className="text-display-lg">Categories &amp; Vendors</h1>
         <p className="mt-2 text-ink-400">Define your spending buckets, and map merchants to them</p>

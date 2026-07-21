@@ -276,7 +276,7 @@ export function Dashboard({ user }: { user: any }) {
   const pageRows = filtered.slice((page - 1) * 25, page * 25)
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-[1800px] px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div>
         <h1 className="text-display-lg">Dashboard</h1>
         <p className="mt-2 text-ink-400">Welcome back, {user.name || user.email}</p>
@@ -303,15 +303,15 @@ export function Dashboard({ user }: { user: any }) {
       <div className="mt-8 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
         <div className="card p-4 sm:p-6">
           <p className="text-body-sm text-ink-400">Total Income</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-sunset">${stats.income.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-sunset">${stats.income.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
         <div className="card p-4 sm:p-6">
           <p className="text-body-sm text-ink-400">Total Expenses</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-dusk">${stats.expenses.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-dusk">${stats.expenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
         <div className="card p-4 sm:p-6">
           <p className="text-body-sm text-ink-400">Net Income</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-breeze">${stats.net.toFixed(2)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-normal text-accent-breeze">${stats.net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -529,7 +529,7 @@ export function Dashboard({ user }: { user: any }) {
                   </button>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
-                      {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toFixed(2)}
+                      {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     {/* Tappable chip — the non-gesture path to recategorizing. */}
                     <button
@@ -588,7 +588,7 @@ export function Dashboard({ user }: { user: any }) {
                     </td>
                     <td className="text-right">
                       <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
-                        {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toFixed(2)}
+                        {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </td>
                     {/* The flex row lives in a wrapper div — putting display:flex

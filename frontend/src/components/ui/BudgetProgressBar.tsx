@@ -19,11 +19,11 @@ export function BudgetProgressBar({ spent, budgeted, color = '#ff7a17' }: Budget
             style={{ backgroundColor: color }}
           />
           <span className="text-body-sm text-ink-300">
-            ${spent.toFixed(2)} / ${budgeted.toFixed(2)}
+            ${spent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / ${budgeted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
         <span className="text-body-sm font-normal text-ink-400">
-          {percentage.toFixed(0)}%
+          {percentage.toLocaleString('en-US', { maximumFractionDigits: 0 })}%
         </span>
       </div>
       <div className="w-full h-2 bg-canvas-soft rounded-full overflow-hidden">

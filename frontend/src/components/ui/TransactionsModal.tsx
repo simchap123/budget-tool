@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import axios from 'axios'
+import { X, Pencil } from 'lucide-react'
 import { fetchAllRecords } from '../../utils/fetchAll'
 import { formatDate } from '../../utils/dateRange'
 import { txAmount } from '../../utils/reportStats'
+import { useCategories, invalidateCategories } from '../../hooks/useCategories'
+import { QuickCategorySheet } from './QuickCategorySheet'
 
 // A drill-down: pass a category / type / date window and it lists exactly those
 // transactions (all of them, paginated), with a running net total. Used to make
@@ -26,6 +29,28 @@ export function TransactionsModal({
   onClose: () => void
 }) {
   const [txns, setTxns] = useState<any[] | null>(null)
+  const [editing, setEditing] = useState<any | null>(null)
+  const categories = useCategories()
+
+  // Recategorize a single transaction from inside the drill-down — e.g. a row
+  // that's usually Tuition but this one is really something else. Optimistic.
+  const changeCategory = async (txn: any, cat: string) => {
+    setEditing(null)
+    setTxns((prev) => (prev || []).map((t) => (t.id === txn.id ? { ...t, category: cat } : t)))
+    try {
+      const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      await axios.patch(
+        `${apiUrl}/collections/transactions/records/${txn.id}`,
+        { category: cat },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      )
+      invalidateCategories()
+    } catch {
+      // Revert on failure.
+      setTxns((prev) => (prev || []).map((t) => (t.id === txn.id ? { ...t, category: txn.category } : t)))
+    }
+  }
 
   useEffect(() => {
     const auth = JSON.parse(localStorage.getItem('pb_auth') || '{}')
@@ -81,7 +106,7 @@ export function TransactionsModal({
               <p className="text-body-sm text-ink-400 mb-3">
                 {txns.length} transaction{txns.length === 1 ? '' : 's'} · net{' '}
                 <span className={net >= 0 ? 'text-accent-sunset' : 'text-accent-dusk'}>
-                  {net >= 0 ? '+' : '-'}${Math.abs(net).toFixed(2)}
+                  {net >= 0 ? '+' : '-'}${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </p>
               <div>
@@ -89,10 +114,21 @@ export function TransactionsModal({
                   <div key={t.id} className="flex items-center justify-between gap-3 py-2 border-b border-canvas-soft last:border-0">
                     <div className="min-w-0">
                       <p className="text-body-sm text-ink-200 truncate">{t.description || 'Transaction'}</p>
-                      <p className="text-body-sm text-ink-500">{formatDate(t.date)} · {t.category || 'Uncategorized'}</p>
+                      <p className="text-body-sm text-ink-500">
+                        {formatDate(t.date)} ·{' '}
+                        {/* Tap the category to recategorize just this transaction. */}
+                        <button
+                          onClick={() => setEditing(t)}
+                          className="inline-flex items-center gap-1 rounded px-1 text-ink-400 underline decoration-dotted decoration-ink-600 underline-offset-2 transition-colors hover:text-ink-200"
+                          title="Change category"
+                        >
+                          {t.category || 'Uncategorized'}
+                          <Pencil size={11} className="opacity-60" />
+                        </button>
+                      </p>
                     </div>
                     <span className={`shrink-0 text-body-sm ${t.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}`}>
-                      {t.type === 'income' ? '+' : '-'}${txAmount(t).toFixed(2)}
+                      {t.type === 'income' ? '+' : '-'}${txAmount(t).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))}
@@ -101,6 +137,16 @@ export function TransactionsModal({
           )}
         </div>
       </div>
+
+      {editing && (
+        <QuickCategorySheet
+          current={editing.category || 'Uncategorized'}
+          categories={categories}
+          title={editing.description || 'Transaction'}
+          onPick={(c) => changeCategory(editing, c)}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>,
     document.body
   )

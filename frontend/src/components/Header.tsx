@@ -22,7 +22,7 @@ export function Header({
   return (
     <>
     <header className="border-b border-ink-700 bg-canvas">
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"

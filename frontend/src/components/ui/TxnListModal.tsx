@@ -60,7 +60,7 @@ export function TxnListModal({
               <p className="mb-3 text-body-sm text-ink-400">
                 {txns.length} transaction{txns.length === 1 ? '' : 's'} · net{' '}
                 <span className={net >= 0 ? 'text-accent-sunset' : 'text-accent-dusk'}>
-                  {net >= 0 ? '+' : '-'}${Math.abs(net).toFixed(2)}
+                  {net >= 0 ? '+' : '-'}${Math.abs(net).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </p>
               <div>
@@ -76,7 +76,7 @@ export function TxnListModal({
                       </p>
                     </div>
                     <span className={`shrink-0 text-body-sm ${t.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}`}>
-                      {t.type === 'income' ? '+' : '-'}${txAmount(t).toFixed(2)}
+                      {t.type === 'income' ? '+' : '-'}${txAmount(t).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))}

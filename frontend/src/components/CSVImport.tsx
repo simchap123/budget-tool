@@ -57,7 +57,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
         .map(t => ({
           Date: String(t.date).slice(0, 10),
           Description: t.description,
-          Amount: `${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}`,
+          Amount: `${t.type === 'income' ? '+' : '-'}$${t.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           Type: t.type,
         }))
       setPreview(preview)

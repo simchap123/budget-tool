@@ -27,8 +27,18 @@ function triggerDownload(blob: Blob, filename: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  a.rel = 'noopener'
+  a.style.display = 'none'
+  // The anchor MUST be in the document for Firefox (and some mobile browsers)
+  // to honour the click; a detached anchor silently does nothing there.
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  // Revoke on a delay — revoking synchronously can cancel the download before
+  // the browser has read the blob.
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 1500)
 }
 
 export async function downloadXlsx(sheets: XlsxSheet[], filename: string): Promise<void> {

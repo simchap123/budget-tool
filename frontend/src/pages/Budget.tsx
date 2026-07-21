@@ -299,7 +299,7 @@ export function Budget() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-display-lg">Budget</h1>
@@ -388,16 +388,16 @@ export function Budget() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <p className="text-body-sm text-ink-400">Budgeted</p>
-            <p className="mt-1 text-xl sm:text-2xl font-normal text-accent-sunset break-words">${totalBudgeted.toFixed(2)}</p>
+            <p className="mt-1 text-xl sm:text-2xl font-normal text-accent-sunset break-words">${totalBudgeted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
           <div>
             <p className="text-body-sm text-ink-400">Spent</p>
-            <p className="mt-1 text-xl sm:text-2xl font-normal text-accent-dusk break-words">${totalSpent.toFixed(2)}</p>
+            <p className="mt-1 text-xl sm:text-2xl font-normal text-accent-dusk break-words">${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
           <div>
             <p className="text-body-sm text-ink-400">Remaining</p>
             <p className={`mt-1 text-xl sm:text-2xl font-normal break-words ${remaining >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>
-              ${Math.abs(remaining).toFixed(2)}
+              ${Math.abs(remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
@@ -420,7 +420,7 @@ export function Budget() {
               <p className="text-body-sm text-ink-400">Recurring &amp; bills each month</p>
             </div>
             <div className="flex items-center gap-2">
-              <p className="text-xl font-normal text-accent-twilight">${totalRecurring.toFixed(0)}<span className="text-body-sm text-ink-500">/mo</span></p>
+              <p className="text-xl font-normal text-accent-twilight">${totalRecurring.toLocaleString('en-US', { maximumFractionDigits: 0 })}<span className="text-body-sm text-ink-500">/mo</span></p>
               <ChevronDown size={16} className={`text-ink-500 transition-transform ${showRecurringList ? 'rotate-180' : ''}`} />
             </div>
           </button>
@@ -436,7 +436,7 @@ export function Budget() {
                     <span className="truncate text-ink-200">{r.label}</span>
                     <span className="shrink-0 text-ink-500">· {r.category}</span>
                   </span>
-                  <span className="shrink-0 text-ink-100">${r.monthly.toFixed(0)}/mo</span>
+                  <span className="shrink-0 text-ink-100">${r.monthly.toLocaleString('en-US', { maximumFractionDigits: 0 })}/mo</span>
                 </div>
               ))}
             </div>
@@ -475,7 +475,7 @@ export function Budget() {
                     >
                       <p className="font-normal text-ink-50 underline decoration-dotted decoration-ink-600 underline-offset-4">{budget.categoryName}</p>
                       <p className="mt-1 text-body-sm text-ink-400">
-                        ${spent.toFixed(2)} of ${budget.budgetAmount.toFixed(2)}
+                        ${spent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of ${budget.budgetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </button>
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -484,7 +484,7 @@ export function Budget() {
                         percent > 90 ? 'text-yellow-400' :
                         'text-accent-breeze'
                       }`}>
-                        {percent.toFixed(0)}%
+                        {percent.toLocaleString('en-US', { maximumFractionDigits: 0 })}%
                       </p>
                       <button
                         onClick={() => openEditBudget(budget)}
@@ -519,16 +519,16 @@ export function Budget() {
                       <div className="mt-3">
                         <div className="flex items-center justify-between text-body-sm">
                           <span className="inline-flex items-center gap-1 text-accent-twilight">
-                            <Repeat size={11} /> Fixed ${fixed.toFixed(0)}
+                            <Repeat size={11} /> Fixed ${fixed.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                           </span>
-                          <span className="text-ink-400">Flexible ${flexible.toFixed(0)}</span>
+                          <span className="text-ink-400">Flexible ${flexible.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                         </div>
-                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft" title={`Fixed $${fixed.toFixed(0)} of $${budget.budgetAmount.toFixed(0)}`}>
+                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft" title={`Fixed $${fixed.toLocaleString('en-US', { maximumFractionDigits: 0 })} of $${budget.budgetAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}>
                           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${fixedPct}%`, backgroundColor: '#c4b5fd' }} />
                         </div>
                         {over > 0 && (
                           <p className="mt-1 text-body-sm text-yellow-400">
-                            Recurring is ${over.toFixed(0)} over this budget — consider raising it.
+                            Recurring is ${over.toLocaleString('en-US', { maximumFractionDigits: 0 })} over this budget — consider raising it.
                           </p>
                         )}
                       </div>
@@ -562,7 +562,7 @@ export function Budget() {
                                   <span className="truncate text-ink-300">{v.label}</span>
                                   {isRec && <Repeat size={11} className="shrink-0 text-accent-twilight" aria-label="recurring" />}
                                 </span>
-                                <span className="shrink-0 text-ink-200">${v.spent.toFixed(2)}</span>
+                                <span className="shrink-0 text-ink-200">${v.spent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               </div>
                               <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-canvas-soft">
                                 <div

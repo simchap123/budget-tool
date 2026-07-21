@@ -44,7 +44,7 @@ export function UpcomingBills() {
       <div className="flex items-center gap-2 mb-4">
         <CalendarClock size={18} className="text-accent-breeze" />
         <h3 className="text-lg font-normal text-ink-50">Upcoming bills</h3>
-        <span className="text-body-sm text-ink-500">· next 3 weeks · ~${total.toFixed(2)}</span>
+        <span className="text-body-sm text-ink-500">· next 3 weeks · ~${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </div>
       <div className="space-y-2">
         {items.map((item) => (
@@ -52,7 +52,7 @@ export function UpcomingBills() {
             <p className="text-body-sm text-ink-300 truncate">{item.label}</p>
             <div className="flex items-center gap-4 shrink-0">
               <span className="text-body-sm text-accent-breeze">~{formatShortDate(item.nextDate)}</span>
-              <span className="text-body-sm text-ink-200 w-20 text-right">${item.avgAmount.toFixed(2)}</span>
+              <span className="text-body-sm text-ink-200 w-20 text-right">${item.avgAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         ))}

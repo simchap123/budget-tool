@@ -97,7 +97,7 @@ export function Giving() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 page-enter">
       <div className="flex items-start gap-3">
         <div className="shrink-0 p-2 rounded-full bg-accent-twilight/15 text-accent-twilight">
           <HandHeart size={22} />
@@ -168,23 +168,23 @@ export function Giving() {
         <div className="mt-3 grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-body-sm text-ink-500">Income</p>
-            <p className="text-lg text-ink-100">${current.income.toFixed(2)}</p>
+            <p className="text-lg text-ink-100">${current.income.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
           <div>
             <p className="text-body-sm text-ink-500">Target ({percent || 0}%)</p>
-            <p className="text-lg text-accent-twilight">${current.target.toFixed(2)}</p>
+            <p className="text-lg text-accent-twilight">${current.target.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
           <div>
             <p className="text-body-sm text-ink-500">Given</p>
             <button type="button" onClick={() => category && setDrill('month')} className="inline-flex min-h-touch items-center text-lg text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See this month's giving">
-              ${current.given.toFixed(2)}
+              ${current.given.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </button>
           </div>
         </div>
         <p className="mt-3 text-center text-body-sm">
           {current.remaining > 0
-            ? <span className="text-ink-300">${current.remaining.toFixed(2)} left to give this month</span>
-            : <span className="text-accent-breeze">Goal met — ${Math.abs(current.remaining).toFixed(2)} over 🎉</span>}
+            ? <span className="text-ink-300">${current.remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} left to give this month</span>
+            : <span className="text-accent-breeze">Goal met — ${Math.abs(current.remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over 🎉</span>}
         </p>
       </div>
 
@@ -195,13 +195,13 @@ export function Giving() {
           <div>
             <p className="text-body-sm text-ink-500">Total given</p>
             <button type="button" onClick={() => category && setDrill('all')} className="inline-flex min-h-touch items-center text-xl sm:text-2xl text-accent-sunset underline decoration-dotted decoration-ink-600 underline-offset-4 hover:opacity-80" title="See all giving transactions">
-              ${summary.totalGiven.toFixed(2)}
+              ${summary.totalGiven.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </button>
           </div>
-          <div><p className="text-body-sm text-ink-500">Total target</p><p className="text-2xl text-accent-twilight">${summary.totalTarget.toFixed(2)}</p></div>
+          <div><p className="text-body-sm text-ink-500">Total target</p><p className="text-2xl text-accent-twilight">${summary.totalTarget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div>
           <div>
             <p className="text-body-sm text-ink-500">{summary.balance >= 0 ? 'Ahead by' : 'Behind by'}</p>
-            <p className={`text-2xl ${summary.balance >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>${Math.abs(summary.balance).toFixed(2)}</p>
+            <p className={`text-2xl ${summary.balance >= 0 ? 'text-accent-breeze' : 'text-red-400'}`}>${Math.abs(summary.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         </div>
       </div>
@@ -217,11 +217,11 @@ export function Giving() {
               {summary.months.slice().reverse().map((m) => (
                 <tr key={m.month} className="border-t border-canvas-soft">
                   <td className="py-2 text-ink-200">{monthLabel(m.month)}</td>
-                  <td className="text-right text-ink-300">${m.income.toFixed(0)}</td>
-                  <td className="text-right text-accent-twilight">${m.target.toFixed(0)}</td>
-                  <td className="text-right text-accent-sunset">${m.given.toFixed(0)}</td>
+                  <td className="text-right text-ink-300">${m.income.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+                  <td className="text-right text-accent-twilight">${m.target.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+                  <td className="text-right text-accent-sunset">${m.given.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
                   <td className={`text-right ${m.remaining <= 0 ? 'text-accent-breeze' : 'text-ink-400'}`}>
-                    {m.remaining <= 0 ? '+' : '-'}${Math.abs(m.remaining).toFixed(0)}
+                    {m.remaining <= 0 ? '+' : '-'}${Math.abs(m.remaining).toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </td>
                 </tr>
               ))}

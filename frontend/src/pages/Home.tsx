@@ -1,7 +1,7 @@
 export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
     <div className="min-h-screen bg-canvas page-enter">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1800px] px-4 py-20 sm:px-6 lg:px-8">
         {/* Hero */}
         <div className="text-center animate-fade-in">
           <h1 className="text-display-lg tracking-tight">
