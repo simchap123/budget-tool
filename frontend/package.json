@@ -19,7 +19,7 @@
     "lucide-react": "^0.474.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.8",
     "react-plaid-link": "^4.1.1",
     "recharts": "^2.10.0"
   },
