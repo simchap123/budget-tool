@@ -53,6 +53,17 @@ routerAdd("POST", "/api/mfa/enable", (c) => {
   const dao = $app.dao();
   const rec = mfaGet(dao, user.id);
   if (!rec || !rec.get("pending")) return c.json(400, { error: "start setup first" });
+
+  // Step-up: if 2FA is already on, re-enrollment must prove the CURRENT factor
+  // (via `current_code`) before we replace it — otherwise a hijacked session
+  // could silently swap the victim's authenticator for the attacker's. The UI
+  // routes re-enrollment through disable-first, so this only bites direct API abuse.
+  if (rec.get("enabled") && rec.get("secret")) {
+    const current = String((info.data && info.data.current_code) || "");
+    const curSecret = $security.decrypt(rec.get("secret"), key);
+    if (!verifyTotp(curSecret, current, null, 1)) return c.json(400, { error: "current code required" });
+  }
+
   const secret = $security.decrypt(rec.get("pending"), key);
   if (!verifyTotp(secret, code, null, 1)) return c.json(400, { error: "invalid code" });
 
