@@ -4,6 +4,7 @@ import { LogOut, ChevronRight } from 'lucide-react'
 import { PlaidConnect } from '../components/PlaidConnect'
 import { BankConnections } from '../components/BankConnections'
 import { EmailImport } from '../components/EmailImport'
+import { TwoFactor } from '../components/TwoFactor'
 import { useToast } from '../components/ui/Toast'
 import { runAutoCategorize } from '../utils/autoCategorize'
 import { invalidateCategories } from '../hooks/useCategories'
@@ -176,6 +177,15 @@ export function Settings({
             onClick={() => onNavigate('giving')}
           />
         </div>
+      </section>
+
+      {/* Security */}
+      <section className="mt-10">
+        <h2 className="text-lg font-normal text-ink-50">Security</h2>
+        <p className="mt-1 text-body-sm text-ink-500">
+          Protect your account with an authenticator-app code at sign-in.
+        </p>
+        <TwoFactor />
       </section>
 
       {/* Account */}
