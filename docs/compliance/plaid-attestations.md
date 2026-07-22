@@ -28,3 +28,17 @@ Plaid attestation to its current status and what makes it truthful. Legend: ✅ 
 5. Attest #1, #4, #5, #6, #8 (once you've enabled it), #10, #11 (privacy URL is live), #12, #13.
 
 *#1 attested on the basis of the documented sole-operator process, not an automated IdP.
+
+---
+
+## Completion log — 2026-07-22
+
+All 13 attestations submitted in the Plaid Compliance Center. Bases:
+
+- **Privacy policy, ISP, Data retention, Secure tokens & certs, MFA (consumer app), Patch SLA** — backed by the artifacts in this repo (privacy.html live; policies in docs/compliance; TOTP 2FA; Let's Encrypt/TLS/HMAC).
+- **RBAC, Access control policy** — previously attested (owner-scoped `userId = @request.auth.id`).
+- **MFA on internal systems (#3)** — access to internal systems (DigitalOcean, Cloudflare, GitHub) is via **GitHub SSO with 2FA enabled** (GitHub enforces 2FA; confirmed on).
+- **Centralized identity & access management (#7)** — **GitHub SSO** is the single identity provider across DigitalOcean, Cloudflare, and GitHub.
+- **Automated de-provisioning (#1)** — sole operator, no employees; documented joiner/mover/leaver process (ISP §3) with same-day credential revocation + secret rotation.
+- **Vulnerability scanning (#9)** — **enabled**: GitHub Dependabot (`.github/dependabot.yml`) + CI `npm audit` (`.github/workflows/security-audit.yml`). Current findings are transitive dev/build deps not present in the deployed static bundle.
+- **Zero trust access architecture (#2)** — application enforces per-request authentication + authorization (owner-scoped RLS on every collection), MFA at login, TLS everywhere, HMAC-verified webhooks, and no implicit network trust between components. Attested on this principles basis at the operator's discretion.

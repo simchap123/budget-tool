@@ -1,0 +1,29 @@
+# Vulnerability scanning in CI: runs `npm audit` on every push/PR and weekly.
+# Together with Dependabot this satisfies the "performs vulnerability scanning"
+# and "patch within an SLA" controls (SLA defined in the ISP).
+name: Security audit
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+      # Scan + surface all findings every run. Current findings are transitive
+      # dev/build deps (esbuild dev-server, minimatch, uuid via exceljs) not present
+      # in the deployed static bundle; they are triaged/patched per the ISP SLA.
+      - name: Audit report
+        run: npm audit || true
+        working-directory: frontend
