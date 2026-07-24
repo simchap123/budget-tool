@@ -12,7 +12,10 @@ export function merchantKey(description: string): string {
     .toUpperCase()
     .replace(/[^A-Z0-9 ]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length >= 4 && !NOISE.has(w) && !/^\d+$/.test(w))
+    // Drop noise words, anything under 4 chars, and any token containing a digit
+    // (store numbers, wire/reference codes like "0701GMQFMP01000737", dates,
+    // phone numbers) — those are never the merchant name.
+    .filter((w) => w.length >= 4 && !NOISE.has(w) && !/\d/.test(w))
     .sort((a, b) => b.length - a.length)
   return tokens[0] || 'OTHER'
 }
