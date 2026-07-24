@@ -108,8 +108,8 @@ cronAdd("email-extract", "* * * * *", () => {
 
       if (!result || !result.found) {
         rec.set("status", "skipped");
-        rec.set("raw", "");
-        dao.saveRecord(rec);
+        rec.set("error", "no transaction found (" + ((result && result.via) || "") + ")");
+        dao.saveRecord(rec); // keep raw so a skipped email can be reprocessed/debugged
         return;
       }
 

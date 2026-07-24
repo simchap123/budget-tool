@@ -56,7 +56,7 @@ routerAdd("POST", "/api/ai/suggest-category", (c) => {
         'Transaction description: "' + desc + '". Reply with ONLY the category name, nothing else.';
       try {
         const res = $http.send({
-          url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+          url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
           method: "POST",
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
           headers: { "Content-Type": "application/json" },
@@ -101,7 +101,7 @@ routerAdd("POST", "/api/ai/insights", (c) => {
       "Summary: " + JSON.stringify(summary);
 
     const res = $http.send({
-      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
       method: "POST",
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
@@ -220,7 +220,7 @@ routerAdd("POST", "/api/ai/categorize-uncategorized", (c) => {
           "concise (1-2 words). Transactions:\n" + lines;
         try {
           const res = $http.send({
-            url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+            url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
             method: "POST",
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],

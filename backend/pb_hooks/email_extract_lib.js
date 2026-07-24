@@ -115,7 +115,7 @@ function parseGeminiJson(text) {
     found: true,
     amount: amount,
     merchant: String(obj.merchant || obj.description || "").slice(0, 120),
-    description: String(obj.description || obj.merchant || "").slice(0, 200),
+    description: String(obj.merchant || obj.description || "").slice(0, 200),
     type: obj.type === "income" ? "income" : "expense",
     date: /^\d{4}-\d{2}-\d{2}$/.test(String(obj.date)) ? obj.date : "",
     accountLast4: String(obj.accountLast4 || "").replace(/\D/g, "").slice(-4),
@@ -139,7 +139,7 @@ function extractWithGemini(email) {
     JSON.stringify(String(body || "").slice(0, 4000));
   try {
     var res = $http.send({
-      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
       method: "POST",
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } }),
       headers: { "Content-Type": "application/json" },
@@ -156,6 +156,46 @@ function extractWithGemini(email) {
   }
 }
 
+// Decode RFC 2047 "=?UTF-8?Q?...?=" / "?B?..." encoded-words (common in subjects).
+function decodeMimeWords(s) {
+  return String(s || "").replace(/=\?[^?]+\?([QqBb])\?([^?]*)\?=/g, function (_, enc, txt) {
+    try {
+      if (enc.toUpperCase() === "B") return decodeURIComponent(escape(atob(txt)));
+      return txt.replace(/_/g, " ").replace(/=([0-9A-Fa-f]{2})/g, function (_, h) { return String.fromCharCode(parseInt(h, 16)); });
+    } catch (e) { return txt; }
+  });
+}
+
+// Last-resort parser (used when no rule matches and Gemini is unavailable/failed):
+// pull the first money amount out of any bank-alert-looking email. Low confidence
+// so it always lands in the review queue for the user to confirm.
+function genericExtract(email) {
+  var subject = decodeMimeWords(email.subject || "");
+  var body = email.text && email.text.length > 20 ? email.text : htmlToText(email.html || "");
+  var blob = subject + "\n" + body;
+  var amount = firstAmount(subject) || firstAmount(body);
+  if (!amount) return { found: false, via: "generic-none" };
+  // Only act on transaction-ish mail so newsletters with a "$" don't slip through.
+  if (!/\b(transaction|purchase|debit|credit|charged?|payment|paid|spent|withdrew|withdrawal|deposit|balance|card|merchant|amount)\b/i.test(blob)) {
+    return { found: false, via: "generic-nokw" };
+  }
+  var merchant = "";
+  var m = blob.match(/\b(?:at|to|with|from)\s+([A-Z0-9][A-Za-z0-9 &'.\-*]{2,40})/);
+  if (m) merchant = m[1].trim().replace(/\s+(on|for|was|has|of|using|ending)\b.*/i, "").trim();
+  var desc = merchant || subject.replace(/^\s*(fwd|re):\s*/i, "").slice(0, 80).trim() || "Email transaction";
+  return {
+    found: true,
+    amount: amount,
+    merchant: merchant,
+    description: desc,
+    type: guessType(blob),
+    date: findDate(blob) || "",
+    accountLast4: last4(blob),
+    confidence: 0.4, // always routes to Needs review
+    via: "generic",
+  };
+}
+
 function extractTransaction(email) {
   email = email || {};
   for (var i = 0; i < RULE_PARSERS.length; i++) {
@@ -164,7 +204,10 @@ function extractTransaction(email) {
       if (r && r.found) return r;
     }
   }
-  return extractWithGemini(email);
+  var g = extractWithGemini(email);
+  if (g && g.found) return g;
+  // Gemini unavailable (e.g. no quota) or found nothing -> generic fallback.
+  return genericExtract(email);
 }
 
 module.exports = {
