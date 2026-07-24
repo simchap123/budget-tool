@@ -81,7 +81,7 @@ export function QuickCategorySheet({
               onClick={() => onPick(q.trim())}
               className="flex min-h-touch w-full items-center gap-2 rounded-sm px-3 text-left text-accent-sunset transition-colors hover:bg-canvas-soft"
             >
-              ➕ Create “{q.trim()}”
+              + Create “{q.trim()}”
             </button>
           )}
           {shown.map((c) => (

@@ -464,7 +464,7 @@ function Budgets({ basis, setBasis, suggestions, selected, setSelected, amounts,
                     <span className="block text-body-sm text-ink-500">
                       {has && 'updates existing'}
                       {has && s.floored && ' · '}
-                      {s.floored && <span className="text-accent-twilight">🔁 covers ${s.floor}/mo recurring</span>}
+                      {s.floored && <span className="text-accent-twilight">covers ${s.floor}/mo recurring</span>}
                     </span>
                   )}
                 </span>

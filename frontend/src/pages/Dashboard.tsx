@@ -385,7 +385,7 @@ export function Dashboard({ user }: { user: any }) {
               onClick={() => setImportOpen(!importOpen)}
               className="btn-secondary px-4"
             >
-              {importOpen ? 'Cancel' : '📤 Import CSV'}
+              {importOpen ? 'Cancel' : 'Import CSV'}
             </button>
             {uncategorizedCount > 0 && (
               <button
@@ -394,7 +394,7 @@ export function Dashboard({ user }: { user: any }) {
                 className="btn-secondary px-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`Auto-categorize the ${uncategorizedCount} uncategorized transaction${uncategorizedCount === 1 ? '' : 's'} this month`}
               >
-                {autoCat ? 'Categorizing…' : `✨ Categorize uncategorized (${uncategorizedCount})`}
+                {autoCat ? 'Categorizing…' : `Categorize uncategorized (${uncategorizedCount})`}
               </button>
             )}
             {transactions.length > 0 && (
@@ -403,7 +403,7 @@ export function Dashboard({ user }: { user: any }) {
                 className="btn-secondary px-4"
                 title="Download this month's transactions as CSV"
               >
-                ⬇ Export Excel
+                Export Excel
               </button>
             )}
           </div>
@@ -536,7 +536,6 @@ export function Dashboard({ user }: { user: any }) {
           <div className="alert-error">{error}</div>
         ) : transactions.length === 0 ? (
           <EmptyState
-            icon="📝"
             title="No transactions yet"
             description="Start tracking your budget by adding your first transaction"
             action={{ label: '+ Add Transaction', onClick: () => setFormOpen(true) }}
@@ -568,7 +567,7 @@ export function Dashboard({ user }: { user: any }) {
             {filtered.length === 0 ? (
               <div className="card p-8 text-center text-ink-400 mt-4">
                 {onlyUncategorized && !search
-                  ? 'Everything this month is categorized. 🎉'
+                  ? 'Everything this month is categorized.'
                   : <>No transactions match &ldquo;{search}&rdquo;.</>}
               </div>
             ) : (

@@ -41,7 +41,7 @@ export function CategorySelect({
           className="shrink-0 text-body-sm text-ink-400 hover:text-ink-200"
           title="Back to the list"
         >
-          ↩
+          ←
         </button>
       </div>
     )
@@ -68,7 +68,7 @@ export function CategorySelect({
       {categories.map((c) => (
         <option key={c} value={c}>{c}</option>
       ))}
-      {allowNew && <option value={ADD}>➕ New category…</option>}
+      {allowNew && <option value={ADD}>+ New category…</option>}
     </select>
   )
 }

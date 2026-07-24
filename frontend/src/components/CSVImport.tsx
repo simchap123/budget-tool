@@ -122,7 +122,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
       }
 
       setSuccess(
-        `✅ Imported ${imported} transaction${imported === 1 ? '' : 's'}` +
+        `Imported ${imported} transaction${imported === 1 ? '' : 's'}` +
         (duplicates > 0 ? ` · skipped ${duplicates} already in your account` : '') +
         (failed > 0 ? ` · ${failed} failed` : '')
       )

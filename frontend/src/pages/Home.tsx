@@ -37,7 +37,6 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
                 className="card p-6 animate-fade-in"
                 style={{ animationDelay: `${idx * 50}ms` }}
               >
-                <div className="text-3xl">{feature.icon}</div>
                 <h3 className="mt-4 text-lg font-normal text-ink-50">{feature.title}</h3>
                 <p className="mt-2 text-body-sm text-ink-400">{feature.description}</p>
               </div>
@@ -65,32 +64,26 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
 
 const features = [
   {
-    icon: '🏦',
     title: 'Bank Integration',
     description: 'Connect to 12,000+ banks with Plaid or upload statements.',
   },
   {
-    icon: '🤖',
     title: 'AI Categorization',
     description: 'Claude automatically categorizes transactions with learning.',
   },
   {
-    icon: '📊',
     title: 'Smart Reports',
     description: 'Generate income statements like QuickBooks.',
   },
   {
-    icon: '🎯',
     title: 'Rule Engine',
     description: 'Create custom rules that improve over time.',
   },
   {
-    icon: '🔐',
     title: 'Self-Hosted',
     description: 'Full control over your financial data.',
   },
   {
-    icon: '💰',
     title: 'Affordable',
     description: 'Just $5/month hosting, no recurring software fees.',
   },

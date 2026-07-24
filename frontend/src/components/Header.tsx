@@ -28,8 +28,7 @@ export function Header({
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => handleNavClick('home')}
           >
-            <span className="text-2xl">💰</span>
-            <span className="text-lg font-normal text-ink-50 hidden sm:inline">Budget</span>
+            <span className="text-lg font-normal text-ink-50">Budget</span>
           </div>
 
           {/* Desktop Navigation */}
