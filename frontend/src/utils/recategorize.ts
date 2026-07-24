@@ -18,7 +18,7 @@ export async function propagateCategory(description: string, category: string): 
       return res.data?.updated || 0
     }
   } catch {
-    /* best-effort — the single row was already changed by the caller */
+    /* best-effort - the single row was already changed by the caller */
   }
   return 0
 }

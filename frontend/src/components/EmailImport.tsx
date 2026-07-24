@@ -40,7 +40,7 @@ export function EmailImport() {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch (e) {
-      toast.error('Copy failed — select and copy manually')
+      toast.error('Copy failed - select and copy manually')
     }
   }
 
@@ -89,7 +89,7 @@ export function EmailImport() {
       </div>
 
       <p className="mt-3 text-body-sm text-ink-500">
-        In your bank's alert settings — or as a Gmail filter — forward transaction
+        In your bank's alert settings - or as a Gmail filter - forward transaction
         alert emails to this address. New transactions land in <strong>Needs review</strong>
         {' '}on your Dashboard, where you confirm or discard them.
       </p>

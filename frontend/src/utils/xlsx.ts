@@ -1,6 +1,6 @@
 // Thin wrapper over ExcelJS that turns a plain sheet description into a real
 // .xlsx download. ExcelJS is imported dynamically so it lands in its own chunk
-// and only loads when a user actually exports — it never weighs down first paint.
+// and only loads when a user actually exports - it never weighs down first paint.
 
 export interface XlsxColumn {
   header: string
@@ -33,7 +33,7 @@ function triggerDownload(blob: Blob, filename: string) {
   // to honour the click; a detached anchor silently does nothing there.
   document.body.appendChild(a)
   a.click()
-  // Revoke on a delay — revoking synchronously can cancel the download before
+  // Revoke on a delay - revoking synchronously can cancel the download before
   // the browser has read the blob.
   setTimeout(() => {
     document.body.removeChild(a)

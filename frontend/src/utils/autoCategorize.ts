@@ -5,7 +5,7 @@ import axios from 'axios'
 // The backend endpoint (`POST /api/ai/categorize-uncategorized`) processes up to
 // 80 uncategorized transactions per call and reports how many it `updated` and
 // how many `remaining` still lack a category. We loop it until the queue is
-// drained — but with two independent brakes so a stuck backend can never spin
+// drained - but with two independent brakes so a stuck backend can never spin
 // forever: stop when a call makes no progress (`updated === 0`), and a hard cap
 // on iterations.
 
@@ -17,7 +17,7 @@ const MAX_ITERATIONS = 60
 export function shouldContinue(updated: number, remaining: number, iterations: number): boolean {
   if (iterations >= MAX_ITERATIONS) return false // hard cap
   if (remaining <= 0) return false // queue drained
-  if (updated <= 0) return false // no progress this round — avoid an infinite loop
+  if (updated <= 0) return false // no progress this round - avoid an infinite loop
   return true
 }
 

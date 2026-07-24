@@ -74,7 +74,7 @@ export function recurringByCategory(txns: RawTxn[]): Record<string, CategoryRecu
   return out
 }
 
-// The set of merchant keys detected as recurring — for flagging a vendor row
+// The set of merchant keys detected as recurring - for flagging a vendor row
 // with a 🔁 in the breakdown.
 export function recurringKeySet(txns: RawTxn[]): Set<string> {
   return new Set(detectRecurring(txns).map((i) => i.key))

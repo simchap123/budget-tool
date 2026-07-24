@@ -149,7 +149,7 @@ export function Giving() {
         </p>
         {!category && (
           <p className="mt-3 text-body-sm text-ink-500">
-            Tip: create a "Charity" or "Tithe" category and tag your giving transactions with it — they'll count here automatically.
+            Tip: create a "Charity" or "Tithe" category and tag your giving transactions with it - they'll count here automatically.
           </p>
         )}
       </form>
@@ -179,7 +179,7 @@ export function Giving() {
         <p className="mt-3 text-center text-body-sm">
           {current.remaining > 0
             ? <span className="text-ink-300">${current.remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} left to give this month</span>
-            : <span className="text-accent-breeze">Goal met — ${Math.abs(current.remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over</span>}
+            : <span className="text-accent-breeze">Goal met - ${Math.abs(current.remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over</span>}
         </p>
       </div>
 

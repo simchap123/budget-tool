@@ -16,7 +16,7 @@ interface Category {
 
 const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#a855f7', '#ec4899']
 
-// Categories & Vendors — the two halves of "how transactions get organized",
+// Categories & Vendors - the two halves of "how transactions get organized",
 // merged into one tabbed page: Categories defines the buckets (name + colour);
 // Vendors maps each merchant to a bucket so a whole merchant re-files at once.
 export function Categories({ initialTab = 'categories' }: { initialTab?: 'categories' | 'vendors' } = {}) {
@@ -37,7 +37,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const authHeaders = () => ({ Authorization: `Bearer ${JSON.parse(localStorage.getItem('pb_auth') || '{}').token}` })
 
-  // ALL categories the user has — records AND ones that only live as strings on
+  // ALL categories the user has - records AND ones that only live as strings on
   // transactions (so nothing is hidden from merge/delete).
   const recordByName = useMemo(() => new Map(categories.map((c) => [c.name, c])), [categories])
   const allNames = useMemo(
@@ -89,7 +89,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
       })
       setUsedCategories(Array.from(new Set(items.map((t: any) => t.category).filter(Boolean))).sort())
     } catch {
-      /* best-effort — datalist just won't autocomplete */
+      /* best-effort - datalist just won't autocomplete */
     }
   }
 
@@ -221,7 +221,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
             </button>
           </div>
 
-          {/* Bulk recategorize — clean up big buckets like "Random" across all history */}
+          {/* Bulk recategorize - clean up big buckets like "Random" across all history */}
           <div className="mt-6">
             <BulkRecategorize
               categories={Array.from(new Set([...categories.map((c) => c.name), ...usedCategories])).sort()}
@@ -270,7 +270,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
             </div>
           )}
 
-          {/* Bulk-merge action bar — appears when categories are selected */}
+          {/* Bulk-merge action bar - appears when categories are selected */}
           {selectedNames.length > 0 && (
             <div className="mt-6 card p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-ink-100">{selectedNames.length} selected</p>
@@ -294,7 +294,7 @@ export function Categories({ initialTab = 'categories' }: { initialTab?: 'catego
             </div>
           )}
 
-          {/* Every category — records AND transaction-only. Click to select; bulk-merge above. */}
+          {/* Every category - records AND transaction-only. Click to select; bulk-merge above. */}
           <div className="mt-6">
             {loading ? (
               <div className="card p-12 text-center text-ink-400">Loading…</div>

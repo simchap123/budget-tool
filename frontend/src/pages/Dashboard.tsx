@@ -22,12 +22,12 @@ import { merchantKey } from '../utils/merchant'
 import { runAutoCategorize } from '../utils/autoCategorize'
 
 // Whether a transaction still needs a category (empty or the "Uncategorized"
-// placeholder) — the predicate behind both the queue toggle and the button's
+// placeholder) - the predicate behind both the queue toggle and the button's
 // visibility.
 const isUncategorized = (txn: any) => !txn.category || txn.category === 'Uncategorized'
 
-// The merchant a transaction rolls up to — the same normalized key the Vendors
-// page groups on — title-cased for display next to the category.
+// The merchant a transaction rolls up to - the same normalized key the Vendors
+// page groups on - title-cased for display next to the category.
 const vendorName = (description: string) =>
   merchantKey(description || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
 
@@ -119,7 +119,7 @@ export function Dashboard({ user }: { user: any }) {
         // Category propagation: if the user changed the category, offer to apply
         // it to every other transaction from the SAME merchant. We match on the
         // normalized merchant key (not the exact description) so the same store
-        // on different dates — with different date/transaction-code suffixes —
+        // on different dates - with different date/transaction-code suffixes -
         // still groups together. Confirm first, since a mixed merchant like
         // Amazon can legitimately span many categories.
         const newCat = formData.category || 'Uncategorized'
@@ -309,7 +309,7 @@ export function Dashboard({ user }: { user: any }) {
   // Same tested money math as Reports (single source of truth for summing amounts).
   const totals = reportTotals(transactions)
   const stats = { income: totals.income, expenses: totals.expense, net: totals.net }
-  // How many transactions in the current month still need a category — drives
+  // How many transactions in the current month still need a category - drives
   // both the "Categorize uncategorized" button and the queue toggle.
   const uncategorizedCount = (transactions as any[]).filter(isUncategorized).length
   // Search filters the displayed list (monthly totals above stay for the month);
@@ -328,7 +328,7 @@ export function Dashboard({ user }: { user: any }) {
         <p className="mt-2 text-ink-400">Welcome back, {user.name || user.email}</p>
       </div>
 
-      {/* Bank linking + connection management now live on Settings — the
+      {/* Bank linking + connection management now live on Settings - the
           Dashboard is for reviewing spend, not one-off account setup. */}
 
       {/* Email-captured transactions awaiting confirmation (hidden when none). */}
@@ -616,7 +616,7 @@ export function Dashboard({ user }: { user: any }) {
                     <span className={txn.type === 'income' ? 'text-accent-sunset' : 'text-accent-dusk'}>
                       {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    {/* Tappable chip — the non-gesture path to recategorizing. */}
+                    {/* Tappable chip - the non-gesture path to recategorizing. */}
                     <button
                       onClick={() => setCategorizing(txn)}
                       className="max-w-[10rem] truncate rounded-pill bg-canvas-soft px-2 py-1 text-body-sm text-ink-400 transition-colors active:bg-ink-700"
@@ -676,7 +676,7 @@ export function Dashboard({ user }: { user: any }) {
                         {txn.type === 'income' ? '+' : '-'}${txAmount(txn).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </td>
-                    {/* The flex row lives in a wrapper div — putting display:flex
+                    {/* The flex row lives in a wrapper div - putting display:flex
                         on the <td> itself drops it out of the table layout and
                         misaligns the whole row. */}
                     <td className="text-right">

@@ -17,7 +17,7 @@ interface Vendor {
 const PAGE = 60
 
 // Vendors: the merchant layer. Every transaction rolls up to a vendor (matched on
-// the normalized merchant key), and a vendor carries a category — so changing a
+// the normalized merchant key), and a vendor carries a category - so changing a
 // vendor's category re-files every transaction from that merchant at once.
 // Rendered as a panel (no page chrome) inside the Categories & Vendors page.
 export function VendorsPanel() {
@@ -145,7 +145,7 @@ export function VendorsPanel() {
         aria-label="Search vendors"
       />
 
-      {/* Bulk-merge bar — combine duplicate vendors (e.g. "Newday" + "Newday Airmont") */}
+      {/* Bulk-merge bar - combine duplicate vendors (e.g. "Newday" + "Newday Airmont") */}
       {selectedVendors.length > 1 && (
         <div className="mt-4 card p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-body-sm text-ink-100">{selectedVendors.length} selected</p>

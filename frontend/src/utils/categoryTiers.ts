@@ -120,7 +120,7 @@ const DETAILED = [
 const uniq = (arr: string[]) => Array.from(new Set(arr))
 
 export const CATEGORY_TIERS: CategoryTier[] = [
-  { id: 'simple', label: 'Simple', blurb: 'Just the basics — 15 broad buckets.', categories: uniq(SIMPLE) },
+  { id: 'simple', label: 'Simple', blurb: 'Just the basics - 15 broad buckets.', categories: uniq(SIMPLE) },
   { id: 'standard', label: 'Standard', blurb: 'Useful detail for most households. Recommended.', categories: uniq(STANDARD) },
-  { id: 'detailed', label: 'Detailed', blurb: 'Maximum control — every sub-category.', categories: uniq(DETAILED) },
+  { id: 'detailed', label: 'Detailed', blurb: 'Maximum control - every sub-category.', categories: uniq(DETAILED) },
 ]

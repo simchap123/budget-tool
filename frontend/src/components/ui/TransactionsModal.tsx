@@ -34,7 +34,7 @@ export function TransactionsModal({
   const [editing, setEditing] = useState<any | null>(null)
   const categories = useCategories()
 
-  // Recategorize a single transaction from inside the drill-down — e.g. a row
+  // Recategorize a single transaction from inside the drill-down - e.g. a row
   // that's usually Tuition but this one is really something else. Optimistic.
   const changeCategory = async (txn: any, cat: string) => {
     setEditing(null)

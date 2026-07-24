@@ -33,7 +33,7 @@ const emptyForm = { name: '', type: 'credit_card', originalBalance: '', matchKey
 
 // Debt & loan payoff tracker. Each debt links to a vendor (merchant key); every
 // transaction that rolls up to that vendor auto-applies to the balance. Balance
-// progress only — no interest math.
+// progress only - no interest math.
 export function Debts() {
   const toast = useToast()
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
@@ -142,7 +142,7 @@ export function Debts() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-display-lg">Debts &amp; Loans</h1>
-          <p className="mt-2 text-ink-400">Track payoff — payments auto-apply from the linked vendor.</p>
+          <p className="mt-2 text-ink-400">Track payoff - payments auto-apply from the linked vendor.</p>
         </div>
         <button onClick={openNew} className="btn-primary self-start px-4 sm:shrink-0">+ Add debt</button>
       </div>
@@ -240,7 +240,7 @@ export function Debts() {
           <div>
             <label className="mb-1 block text-body-sm text-ink-400">Payments come from (vendor)</label>
             <select value={form.matchKey} onChange={(e) => setForm({ ...form, matchKey: e.target.value })} className="input-base">
-              <option value="">— not linked (track manually) —</option>
+              <option value="">- not linked (track manually) -</option>
               {form.matchKey && !vendors.some((v) => v.matchKey === form.matchKey) && <option value={form.matchKey}>{titleCase(form.matchKey)}</option>}
               {vendors.map((v) => <option key={v.matchKey} value={v.matchKey}>{v.name}</option>)}
             </select>

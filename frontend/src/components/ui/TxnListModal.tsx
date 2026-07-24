@@ -11,8 +11,8 @@ import { QuickCategorySheet } from './QuickCategorySheet'
 
 // A drill-down: renders a preloaded list of transactions with a running net
 // total. Unlike TransactionsModal (which fetches by a server filter) this takes
-// an already-filtered array, so the Reports page can drill into any group —
-// including vendor and budget — using the exact rows it already grouped.
+// an already-filtered array, so the Reports page can drill into any group -
+// including vendor and budget - using the exact rows it already grouped.
 //
 // Categories are editable inline: tapping a row's category recategorizes just
 // that transaction (optimistic PATCH), keeps a local copy in sync, and calls

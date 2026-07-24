@@ -38,7 +38,7 @@ function contribution(t: ReportTxn, type: ValueType): number {
   const amt = txAmount(t)
   if (type === 'income') return t.type === 'income' ? amt : 0
   if (type === 'expense') return t.type === 'expense' ? amt : 0
-  // mixed: gross throughput — every income AND expense contributes its magnitude,
+  // mixed: gross throughput - every income AND expense contributes its magnitude,
   // so a row reflects total money moved regardless of direction.
   if (type === 'mixed') return t.type === 'income' || t.type === 'expense' ? amt : 0
   // net: income positive, expense negative
@@ -111,7 +111,7 @@ export function groupTransactions(
   return { rows, total }
 }
 
-// Predicate matching the transactions that make up one report row — used to
+// Predicate matching the transactions that make up one report row - used to
 // drive drill-down from the exact same grouping logic the chart used, so a
 // row's drill-down can never disagree with its displayed total.
 export function rowMatcher(groupBy: GroupBy, key: string): (t: ReportTxn) => boolean {

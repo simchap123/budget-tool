@@ -42,19 +42,19 @@ export function PlaidConnect({ onSynced }: { onSynced?: () => void }) {
   }
 
   // The webhook creates the item and syncs server-side. Big histories (e.g. Chase)
-  // arrive asynchronously via SYNC_UPDATES_AVAILABLE, often after the redirect —
+  // arrive asynchronously via SYNC_UPDATES_AVAILABLE, often after the redirect -
   // so nudge a sync early, then watch the transaction count grow for ~90s (cheap
   // local checks, not repeated Plaid calls) and refresh the moment they land.
   const pollSync = async () => {
     setLoading(true)
-    toast.success('Finishing bank connection — importing your full history…')
+    toast.success('Finishing bank connection - importing your full history…')
     const baseline = await countTransactions()
     let lastCount = baseline
     let quiet = 0
     // Chase's history (up to 24 months) loads in stages. Keep nudging /plaid/sync
-    // and watch the count grow until it goes quiet (all history in) — up to ~4 min.
+    // and watch the count grow until it goes quiet (all history in) - up to ~4 min.
     for (let i = 0; i < 40 && quiet < 4; i++) {
-      try { await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() }) } catch { /* PRODUCT_NOT_READY early — retry */ }
+      try { await axios.post(`${apiUrl}/plaid/sync`, {}, { headers: headers() }) } catch { /* PRODUCT_NOT_READY early - retry */ }
       const now = await countTransactions()
       if (now > lastCount) {
         lastCount = now
@@ -108,7 +108,7 @@ export function PlaidConnect({ onSynced }: { onSynced?: () => void }) {
       {chaseDegraded && (
         <span className="inline-flex items-center gap-1 text-body-sm text-yellow-400 max-w-xs">
           <AlertTriangle size={13} className="shrink-0" />
-          Chase logins are temporarily degraded (Plaid status) — connecting may fail; try again later.
+          Chase logins are temporarily degraded (Plaid status) - connecting may fail; try again later.
         </span>
       )}
     </div>

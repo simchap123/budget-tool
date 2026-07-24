@@ -33,7 +33,7 @@ const CHART_LIMIT = 12
 
 const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-// How many calendar months a range covers — used to scale monthly budgets (which
+// How many calendar months a range covers - used to scale monthly budgets (which
 // carry forward) up to the selected window for a fair budget-vs-actual compare.
 function monthsInRange(start: string, endExclusive: string, txns: any[]): number {
   if (start && endExclusive) {
@@ -169,10 +169,10 @@ export function Reports() {
             txns: transactions,
             totals,
           })
-      // Filename-safe (not sheet-name-safe — no 31-char cap): collapse the
+      // Filename-safe (not sheet-name-safe - no 31-char cap): collapse the
       // range label's spaces and en-dash into single hyphens.
       const name = `report-${groupBy}-${range.label}`
-        .replace(/[–—]/g, '-')
+        .replace(/[–-]/g, '-')
         .replace(/[^a-zA-Z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
       await downloadXlsx(sheets, `${name}.xlsx`)
@@ -259,7 +259,7 @@ export function Reports() {
             onClick={() => openStatement('month')}
             disabled={exporting}
             className="btn-secondary px-4"
-            title="Income statement: categories by month for the selected year — view then export"
+            title="Income statement: categories by month for the selected year - view then export"
           >
             P&amp;L · monthly
           </button>
@@ -267,7 +267,7 @@ export function Reports() {
             onClick={() => openStatement('year')}
             disabled={exporting}
             className="btn-secondary px-4"
-            title="Income statement: categories by year — view then export"
+            title="Income statement: categories by year - view then export"
           >
             <Download size={16} className="mr-2" /> P&amp;L · yearly
           </button>
@@ -405,7 +405,7 @@ export function Reports() {
               </ResponsiveContainer>
             )}
             {grouped.rows.length > CHART_LIMIT && (
-              <p className="mt-3 text-body-sm text-ink-500">Chart shows the top {CHART_LIMIT} of {grouped.rows.length} — the full list is in the table below.</p>
+              <p className="mt-3 text-body-sm text-ink-500">Chart shows the top {CHART_LIMIT} of {grouped.rows.length} - the full list is in the table below.</p>
             )}
           </div>
 
@@ -441,7 +441,7 @@ export function Reports() {
                       {showAvgPerYear && <td className="text-right text-ink-300">{money(r.value / rangeMonths)}</td>}
                       {showAvgPerYear && <td className="text-right text-ink-300">{money(r.value / years)}</td>}
                       <td className="text-right text-ink-500">
-                        {grouped.total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(grouped.total)) * 100)}%` : '—'}
+                        {grouped.total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(grouped.total)) * 100)}%` : '-'}
                       </td>
                     </tr>
                   ))}

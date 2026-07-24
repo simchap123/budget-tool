@@ -6,7 +6,7 @@ import { fetchAllRecords } from '../utils/fetchAll'
 import { CategorySelect } from './ui/CategorySelect'
 
 // Find every transaction whose description contains a term (across all history)
-// and recategorize them in one confirmed action — for cleaning up big buckets
+// and recategorize them in one confirmed action - for cleaning up big buckets
 // like a catch-all "Random" category. The user always sees the exact count and a
 // breakdown before anything changes.
 export function BulkRecategorize({ categories, onDone }: { categories: string[]; onDone: () => void }) {
@@ -50,7 +50,7 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
     if (!window.confirm(`Recategorize ${matches.length} transaction(s) matching "${term.trim()}" to "${target.trim()}"? This can't be undone in bulk.`)) return
     setBusy(true)
     try {
-      // One server-side pass — fast and reliable even for hundreds of rows.
+      // One server-side pass - fast and reliable even for hundreds of rows.
       const { data } = await axios.post(
         `${apiUrl}/rpc/bulk-recategorize`,
         { term: term.trim(), category: target.trim() },
@@ -101,7 +101,7 @@ export function BulkRecategorize({ categories, onDone }: { categories: string[];
           ) : (
             <>
               <p className="text-body-sm text-ink-200">
-                <span className="text-accent-twilight font-medium">{matches.length}</span> match — currently:{' '}
+                <span className="text-accent-twilight font-medium">{matches.length}</span> match - currently:{' '}
                 {breakdown().slice(0, 5).map(([c, n], i) => (
                   <span key={c} className="text-ink-400">{i > 0 ? ', ' : ''}{n} {c}</span>
                 ))}

@@ -14,7 +14,7 @@ export interface CsvTransaction {
 const num = (s: string): number => parseFloat(String(s).replace(/[$,\s]/g, ''))
 
 // Find the index of the column that holds the (signed) amount, so a file-level
-// scan can tell whether amounts are signed (a Chase-style export) — in which case
+// scan can tell whether amounts are signed (a Chase-style export) - in which case
 // a negative amount means an expense and a positive one means income.
 export function amountColumnIndex(headers: string[]): number {
   return headers.findIndex((h) => /^amount$/i.test(String(h).trim()))
@@ -52,7 +52,7 @@ export function txnSignature(t: { date: string; amount: number; description: str
 // Split freshly-parsed rows into the ones NOT already in the account vs. how many
 // were duplicates. Uses a COUNT of each signature, not just presence, so a real
 // repeat purchase (two identical coffees the same day) still imports the second
-// copy when only one is already stored — while re-uploading an overlapping export
+// copy when only one is already stored - while re-uploading an overlapping export
 // skips exactly the rows already there.
 export function dedupeAgainstExisting<T extends { date: string; amount: number; description: string; type: string }>(
   candidates: T[],
@@ -74,7 +74,7 @@ export function dedupeAgainstExisting<T extends { date: string; amount: number; 
 }
 
 // Map one parsed CSV row to a transaction, or null to skip it (no description, or
-// a zero / non-numeric amount). Tolerates the column names real banks use — esp.
+// a zero / non-numeric amount). Tolerates the column names real banks use - esp.
 // Chase: "Transaction Date"/"Posting Date" for the date, a single signed "Amount",
 // or separate "Debit"/"Credit" columns. When `signedAmounts` is true, a negative
 // amount is an expense and a positive one is income (Chase signs its amounts).

@@ -38,7 +38,7 @@ export function NeedsReview({ onChange }: { onChange?: () => void }) {
       )
       setItems(data.items || [])
     } catch (e) {
-      // Field may not exist yet on a stale backend — fail quietly, show nothing.
+      // Field may not exist yet on a stale backend - fail quietly, show nothing.
       setItems([])
     } finally {
       setLoading(false)
@@ -89,7 +89,7 @@ export function NeedsReview({ onChange }: { onChange?: () => void }) {
         <h2 className="text-lg font-normal text-ink-50">Needs review</h2>
         <span className="rounded-full bg-accent-sunset/20 px-2 py-0.5 text-body-sm text-accent-sunset">{items.length}</span>
       </div>
-      <p className="mt-1 text-body-sm text-ink-500">Captured from email. Confirm the category, then approve — or discard.</p>
+      <p className="mt-1 text-body-sm text-ink-500">Captured from email. Confirm the category, then approve - or discard.</p>
 
       <div className="mt-4 space-y-2">
         {items.map((t) => (

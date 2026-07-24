@@ -27,7 +27,7 @@ export interface GivingSummary {
 // income = sum of income transactions, target = percent of income, given = sum of
 // EXPENSE transactions in the giving category. Category matches are case-insensitive.
 // `incomeCategory` optionally restricts the tithe base to one income category
-// (e.g. "Paychecks") — leave blank to tithe on all income. `balance` shows whether
+// (e.g. "Paychecks") - leave blank to tithe on all income. `balance` shows whether
 // cumulative giving is ahead of or behind the target.
 export function computeGiving(
   txns: GivingTxn[],

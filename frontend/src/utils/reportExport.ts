@@ -61,7 +61,7 @@ export function buildReportSheets(input: ReportExportInput): XlsxSheet[] {
         label: r.label,
         count: r.count,
         value: round2(r.value),
-        pct: total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(total)) * 100)}%` : '—',
+        pct: total !== 0 ? `${Math.round((Math.abs(r.value) / Math.abs(total)) * 100)}%` : '-',
       }
       if (showAvgPerYear) {
         row.avgPerMonth = round2(r.value / months)

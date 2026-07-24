@@ -8,7 +8,7 @@ export type BudgetBasis = 'avg6' | 'avg12' | 'median' | 'high' | 'low'
 export const BASIS_OPTIONS: { value: BudgetBasis; label: string; hint: string }[] = [
   { value: 'avg6', label: 'Average · last 6 months', hint: 'Typical recent spend' },
   { value: 'avg12', label: 'Average · last 12 months', hint: 'Typical spend over a year' },
-  { value: 'median', label: 'Median month', hint: 'Middle month — ignores outliers' },
+  { value: 'median', label: 'Median month', hint: 'Middle month - ignores outliers' },
   { value: 'high', label: 'Highest month', hint: 'A safe ceiling' },
   { value: 'low', label: 'Lowest month', hint: 'A lean target' },
 ]

@@ -84,7 +84,7 @@ export function Budget() {
         setRecurKeys(recurringKeySet(items))
         setTotalRecurring(totalMonthlyRecurring(items))
       } catch {
-        /* recurring is additive — ignore failures */
+        /* recurring is additive - ignore failures */
       }
     }
     loadRecurring()
@@ -210,7 +210,7 @@ export function Budget() {
           { category: cat, budgetAmount: amount, year, month, userId: auth.record.id },
           { headers: { Authorization: `Bearer ${auth.token}` } }
         )
-        toast.success('Budget set — it now applies every month')
+        toast.success('Budget set - it now applies every month')
       }
 
       setFormData({ category: '', budgetAmount: '' })
@@ -247,7 +247,7 @@ export function Budget() {
         .slice(0, 12)
 
       if (toCreate.length === 0) {
-        toast.info('No new suggestions — you already have budgets for your spending')
+        toast.info('No new suggestions - you already have budgets for your spending')
         return
       }
       for (const [category, budgetAmount] of toCreate) {
@@ -293,7 +293,7 @@ export function Budget() {
   const totalSpent = transactions.reduce((sum, t) => sum + (t.spent || 0), 0)
   const remaining = totalBudgeted - totalSpent
 
-  // Every recurring charge, flattened across categories, biggest first — the
+  // Every recurring charge, flattened across categories, biggest first - the
   // list the retired Recurring page used to show.
   const allRecurring = Object.entries(recurByCat)
     .flatMap(([category, r]) => r.vendors.map((v) => ({ ...v, category })))
@@ -374,7 +374,7 @@ export function Budget() {
             Zero-based budgeting · showing spend for {monthYear}
           </p>
           <p className="mt-1 text-body-sm text-ink-500">
-            Each month has its own budget — carry last month over or start fresh.
+            Each month has its own budget - carry last month over or start fresh.
           </p>
         </div>
         {/* wrap, don't shrink-0: two full-width buttons side by side were
@@ -482,7 +482,7 @@ export function Budget() {
         </div>
       </div>
 
-      {/* Recurring / fixed — the committed part of the plan. Expands to the full
+      {/* Recurring / fixed - the committed part of the plan. Expands to the full
           subscription list, which is why the standalone Recurring page retired. */}
       {totalRecurring > 0 && (
         <div className="mt-4 card p-4 sm:p-6">
@@ -501,7 +501,7 @@ export function Budget() {
             </div>
           </button>
           <p className="mt-1 text-body-sm text-ink-500">
-            Detected subscriptions &amp; bills — the fixed part of your budget that repeats every month.
+            Detected subscriptions &amp; bills - the fixed part of your budget that repeats every month.
           </p>
           {showRecurringList && (
             <div className="mt-3 space-y-1.5 border-t border-ink-700 pt-3">
@@ -609,7 +609,7 @@ export function Budget() {
                         </div>
                         {over > 0 && (
                           <p className="mt-1 text-body-sm text-yellow-400">
-                            Recurring is ${over.toLocaleString('en-US', { maximumFractionDigits: 0 })} over this budget — consider raising it.
+                            Recurring is ${over.toLocaleString('en-US', { maximumFractionDigits: 0 })} over this budget - consider raising it.
                           </p>
                         )}
                       </div>
@@ -754,7 +754,7 @@ export function Budget() {
       })()}
 
       {/* Vendor drill: this merchant's transactions in this category, this month.
-          Filtered from the already-loaded monthTxns — same key as the breakdown. */}
+          Filtered from the already-loaded monthTxns - same key as the breakdown. */}
       {vendorDrill && (() => {
         const rows = monthTxns.filter(
           (t) =>

@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="text-5xl mb-4">⚠️</div>
             <h1 className="text-display-sm mb-3">Something went wrong</h1>
             <p className="text-ink-400 mb-6">
-              The app hit an unexpected error. Reloading usually fixes it — your data is safe.
+              The app hit an unexpected error. Reloading usually fixes it - your data is safe.
             </p>
             <button onClick={this.handleReload} className="btn-primary px-6 py-2">
               Reload

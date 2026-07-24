@@ -57,7 +57,7 @@ export function TwoFactor() {
       setQr('')
       setEnabled(true)
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Invalid code — try again')
+      toast.error(e?.response?.data?.error || 'Invalid code - try again')
     } finally {
       setBusy(false)
     }
@@ -133,7 +133,7 @@ export function TwoFactor() {
         <p className="text-ink-100">Two-factor authentication is off</p>
       </div>
       <p className="mt-1 text-body-sm text-ink-500">
-        Add a second step at sign-in using an authenticator app — strongly recommended for a finance account.
+        Add a second step at sign-in using an authenticator app - strongly recommended for a finance account.
       </p>
       <button onClick={startSetup} disabled={busy} className="btn-primary mt-4 px-4 disabled:opacity-50">
         {busy ? 'Starting…' : 'Set up two-factor'}

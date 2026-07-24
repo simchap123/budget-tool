@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { fetchAllRecords } from '../utils/fetchAll'
 
 // The user's category list. Two sources, merged and de-duplicated:
-//   1. the `categories` collection — the canonical list the user maintains
+//   1. the `categories` collection - the canonical list the user maintains
 //      (so brand-new categories show up before any transaction uses them);
 //   2. distinct category strings already on their transactions (covers anything
 //      imported that isn't in the collection yet).

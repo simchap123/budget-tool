@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Fetch ALL records matching a query, paging past PocketBase's 500-rows-per-page
-// cap. Multi-month/all-time aggregations must use this — a single 500-row page
+// cap. Multi-month/all-time aggregations must use this - a single 500-row page
 // silently undercounts for accounts with lots of history.
 export async function fetchAllRecords(
   apiUrl: string,

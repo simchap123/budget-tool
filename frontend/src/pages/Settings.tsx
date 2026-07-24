@@ -11,7 +11,7 @@ import { invalidateCategories } from '../hooks/useCategories'
 import { CATEGORY_TIERS } from '../utils/categoryTiers'
 
 // Central place for account-level configuration. Bank linking lives here rather
-// than on the Dashboard, which is a working surface — connecting a bank is a
+// than on the Dashboard, which is a working surface - connecting a bank is a
 // once-in-a-while setup action, not something you do while reviewing spend.
 export function Settings({
   user,
@@ -30,14 +30,14 @@ export function Settings({
 
   // Switch category detail level anytime. This is additive and non-destructive:
   // it only creates the tier's categories that don't already exist. Your
-  // transactions and the categories you already use are never touched — so
+  // transactions and the categories you already use are never touched - so
   // moving from Simple to Detailed just gives you more buckets to sort into.
   const applyTier = async (tierId: string) => {
     const tier = CATEGORY_TIERS.find((t) => t.id === tierId)
     if (!tier || seedingTier) return
     const ok = window.confirm(
       `Add the “${tier.label}” category set (${tier.categories.length} categories)?\n\n` +
-        `This only adds categories you don't already have. Your transactions and existing categories stay exactly as they are — nothing is renamed or recategorized.`
+        `This only adds categories you don't already have. Your transactions and existing categories stay exactly as they are - nothing is renamed or recategorized.`
     )
     if (!ok) return
     setSeedingTier(tierId)
@@ -103,7 +103,7 @@ export function Settings({
       >
         <span className="min-w-0 flex-1">
           <span className="block text-ink-100">{categorizing ? 'Categorizing…' : 'Categorize all uncategorized (AI)'}</span>
-          <span className="block text-body-sm text-ink-400">Sweeps every uncategorized transaction across all months — history first, then AI</span>
+          <span className="block text-body-sm text-ink-400">Sweeps every uncategorized transaction across all months - history first, then AI</span>
         </span>
         <ChevronRight size={18} className="shrink-0 text-ink-500" />
       </button>
@@ -122,7 +122,7 @@ export function Settings({
         <BankConnections />
       </section>
 
-      {/* Email import — capture transactions from forwarded bank alert emails. */}
+      {/* Email import - capture transactions from forwarded bank alert emails. */}
       <section className="mt-10">
         <h2 className="text-lg font-normal text-ink-50">Email import</h2>
         <p className="mt-1 text-body-sm text-ink-500">
@@ -132,12 +132,12 @@ export function Settings({
         <EmailImport />
       </section>
 
-      {/* Category detail level — switch the starter system anytime. Additive, so
+      {/* Category detail level - switch the starter system anytime. Additive, so
           it never loses transactions or existing categories. */}
       <section className="mt-10">
         <h2 className="text-lg font-normal text-ink-50">Category detail level</h2>
         <p className="mt-1 text-body-sm text-ink-500">
-          Add a broader or more detailed category set. This only adds categories — your
+          Add a broader or more detailed category set. This only adds categories - your
           transactions and existing categories are never changed.
         </p>
         <div className="mt-4 space-y-2">

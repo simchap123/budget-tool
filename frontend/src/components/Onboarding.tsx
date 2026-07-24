@@ -84,7 +84,7 @@ export function Onboarding({
     load()
   }, [])
 
-  // Deterministic spending summary — the backbone the whole wizard runs on, and
+  // Deterministic spending summary - the backbone the whole wizard runs on, and
   // what we hand the AI for the narrative.
   const summary = useMemo(() => {
     const expense = txns.filter((t) => t.type === 'expense')
@@ -106,7 +106,7 @@ export function Onboarding({
     }
   }, [txns])
 
-  // Recurring monthly commitment per category — a budget should never be
+  // Recurring monthly commitment per category - a budget should never be
   // suggested below what the user is already committed to paying.
   const recurByCat = useMemo(() => recurringByCategory(txns), [txns])
 
@@ -319,7 +319,7 @@ function Welcome({
         </p>
       </div>
 
-      {/* Starter category system — pick one, add/rename/merge more anytime. */}
+      {/* Starter category system - pick one, add/rename/merge more anytime. */}
       <div className="mt-6">
         <p className="mb-2 text-body-sm text-ink-400">How detailed do you want your categories?</p>
         <div className="space-y-2">
@@ -349,7 +349,7 @@ function Welcome({
             )
           })}
         </div>
-        <p className="mt-2 text-body-sm text-ink-500">Optional — you can skip this and add categories as you go.</p>
+        <p className="mt-2 text-body-sm text-ink-500">Optional - you can skip this and add categories as you go.</p>
       </div>
     </div>
   )
@@ -494,7 +494,7 @@ function GivingStep({ percent, setPercent }: any) {
   return (
     <div>
       <h3 className="text-lg text-ink-50">Giving goal (optional)</h3>
-      <p className="mt-2 text-ink-400">Track a percentage of your income toward giving — tithe, charity, anything.</p>
+      <p className="mt-2 text-ink-400">Track a percentage of your income toward giving - tithe, charity, anything.</p>
       <label className="mt-4 block">
         <span className="mb-1 block text-body-sm text-ink-400">Give this % of income</span>
         <input

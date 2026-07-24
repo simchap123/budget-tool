@@ -1,5 +1,5 @@
 // Share of a budget that's been spent, clamped to 0–100. Guards against a zero
-// budget (no divide-by-zero — an unset budget reads as 0% spent).
+// budget (no divide-by-zero - an unset budget reads as 0% spent).
 export function budgetPercent(spent: number, budgeted: number): number {
   return budgeted > 0 ? Math.min((spent / budgeted) * 100, 100) : 0
 }

@@ -17,7 +17,7 @@ export interface SwipeAction {
 //  - We only start translating once the gesture is clearly horizontal, so a
 //    slightly-diagonal scroll doesn't twitch the row sideways.
 //  - Opening is controlled by the parent so that opening one row closes any
-//    other — two rows open at once reads as broken.
+//    other - two rows open at once reads as broken.
 export function SwipeableRow({
   actions,
   open,

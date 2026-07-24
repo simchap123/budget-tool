@@ -35,7 +35,7 @@ export default function App() {
       // the record directly, so normalize to the record for a consistent shape.
       setUser(userData.record || userData)
       // Plaid redirects back with ?plaid=done. PlaidConnect polls for the
-      // incoming history on mount, and it only lives on Settings now — so land
+      // incoming history on mount, and it only lives on Settings now - so land
       // there rather than the Dashboard, or the import would never be watched.
       const returningFromPlaid =
         new URLSearchParams(window.location.search).get('plaid') === 'done'

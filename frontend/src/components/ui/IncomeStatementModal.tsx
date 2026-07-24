@@ -5,7 +5,7 @@ import { buildIncomeStatement, incomeStatementSheet } from '../../utils/incomeSt
 import { downloadXlsx } from '../../utils/xlsx'
 import { TransactionsModal } from './TransactionsModal'
 
-const money = (n: number) => (n === 0 ? '—' : `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`)
+const money = (n: number) => (n === 0 ? '-' : `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`)
 
 // On-screen, clickable Income Statement (P&L). Categories down the side, periods
 // across the top, Income/Expense sections + Net. Every category cell drills into

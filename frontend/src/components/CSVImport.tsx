@@ -182,7 +182,7 @@ export function CSVImport({ onImportComplete }: { onImportComplete: () => void }
 
         {preview.length > 0 && (
           <div>
-            <p className="text-body-sm text-ink-300 mb-2">Preview — what will be imported (first 5):</p>
+            <p className="text-body-sm text-ink-300 mb-2">Preview - what will be imported (first 5):</p>
             <div className="table-scroll bg-canvas-card">
               <table className="table-minimal w-full">
                 <thead>

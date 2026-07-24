@@ -42,7 +42,7 @@ export function Login({
         setError('')
       } else if (marker === 'mfa_invalid') {
         setMfaRequired(true)
-        setError('That code was incorrect — try again.')
+        setError('That code was incorrect - try again.')
       } else {
         setError(msg || err.message || 'Login failed')
       }
